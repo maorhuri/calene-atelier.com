@@ -448,6 +448,44 @@ class Decor_Attribute_Pricing {
         }
         
         $base_price = floatval($product->get_price());
+        
+        // Check if product uses price matrix
+        $matrix_price = self::get_matrix_price($product_id, $selections);
+        if ($matrix_price !== false) {
+            // Build breakdown for matrix pricing
+            $breakdown = array();
+            foreach ($selections as $attribute => $term_slug) {
+                if (empty($term_slug)) continue;
+                
+                $taxonomy = strpos($attribute, 'pa_') === 0 ? $attribute : 'pa_' . $attribute;
+                $term = get_term_by('slug', sanitize_title($term_slug), $taxonomy);
+                $option_name = $term ? $term->name : $term_slug;
+                
+                $attr_label = self::get_attribute_frontend_name($taxonomy);
+                if (!$attr_label || $attr_label === $taxonomy) {
+                    $attr_label = ucfirst(str_replace(array('pa_', '-', '_'), array('', ' ', ' '), $attribute));
+                }
+                
+                $breakdown[] = array(
+                    'attribute' => $attr_label,
+                    'option' => $option_name,
+                    'modifier' => 0,
+                    'type' => 'matrix',
+                );
+            }
+            
+            wp_send_json_success(array(
+                'base_price' => $matrix_price,
+                'modifier' => 0,
+                'final_price' => $matrix_price,
+                'formatted_price' => wc_price($matrix_price),
+                'breakdown' => $breakdown,
+                'pricing_mode' => 'matrix',
+            ));
+            return;
+        }
+        
+        // Fallback to additive pricing
         $total_modifier = 0;
         $breakdown = array();
         
@@ -526,7 +564,6 @@ class Decor_Attribute_Pricing {
         
         $attributes = $product->get_attributes();
         $selections = array();
-        $price_modifier = 0;
         $base_price = floatval($product->get_price());
         
         foreach ($attributes as $attribute) {
@@ -536,28 +573,37 @@ class Decor_Attribute_Pricing {
             if (isset($_POST[$post_key]) && !empty($_POST[$post_key])) {
                 $value = sanitize_text_field($_POST[$post_key]);
                 $selections[$name] = $value;
-                
-                // Get pricing key - use attribute name for both taxonomy and custom attributes
-                $pricing_key = $name;
-                
-                // Get product-level pricing (includes per-variation pricing)
-                $price_data = self::get_product_attribute_price($product_id, $pricing_key, $value);
-                $price = floatval($price_data['price']);
-                $price_type = $price_data['type'];
-                
-                if ($price > 0) {
-                    if ($price_type === 'percentage') {
-                        $price_modifier += $base_price * ($price / 100);
-                    } else {
-                        $price_modifier += $price;
-                    }
-                }
             }
         }
         
         if (!empty($selections)) {
             $cart_item_data['attribute_selections'] = $selections;
-            $cart_item_data['attribute_price_modifier'] = $price_modifier;
+            
+            // Check if product uses price matrix
+            $matrix_price = self::get_matrix_price($product_id, $selections);
+            if ($matrix_price !== false) {
+                // Use matrix price (absolute price, not modifier)
+                $cart_item_data['attribute_price_modifier'] = $matrix_price - $base_price;
+                $cart_item_data['use_matrix_price'] = true;
+                $cart_item_data['matrix_final_price'] = $matrix_price;
+            } else {
+                // Use additive pricing
+                $price_modifier = 0;
+                foreach ($selections as $name => $value) {
+                    $price_data = self::get_product_attribute_price($product_id, $name, $value);
+                    $price = floatval($price_data['price']);
+                    $price_type = $price_data['type'];
+                    
+                    if ($price > 0) {
+                        if ($price_type === 'percentage') {
+                            $price_modifier += $base_price * ($price / 100);
+                        } else {
+                            $price_modifier += $price;
+                        }
+                    }
+                }
+                $cart_item_data['attribute_price_modifier'] = $price_modifier;
+            }
         }
         
         return $cart_item_data;
@@ -572,6 +618,12 @@ class Decor_Attribute_Pricing {
         }
         if (isset($values['attribute_price_modifier'])) {
             $cart_item['attribute_price_modifier'] = $values['attribute_price_modifier'];
+        }
+        if (isset($values['use_matrix_price'])) {
+            $cart_item['use_matrix_price'] = $values['use_matrix_price'];
+        }
+        if (isset($values['matrix_final_price'])) {
+            $cart_item['matrix_final_price'] = $values['matrix_final_price'];
         }
         return $cart_item;
     }
@@ -734,12 +786,157 @@ class Decor_Attribute_Pricing {
             $product_attribute_pricing = array();
         }
         
+        // Get price matrix settings
+        $use_price_matrix = get_post_meta($product_id, '_use_price_matrix', true);
+        $price_matrix = get_post_meta($product_id, '_price_matrix', true);
+        if (!is_array($price_matrix)) {
+            $price_matrix = array();
+        }
+        
         ?>
         <div id="attribute_pricing_data" class="panel woocommerce_options_panel">
-            <div class="options_group">
+            
+            <!-- Price Matrix Toggle -->
+            <div class="options_group" style="border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 15px;">
                 <p class="form-field">
-                    <strong><?php _e('Product-Level Attribute Pricing', 'decor'); ?></strong><br>
-                    <span class="description"><?php _e('Set prices for attributes on this product.', 'decor'); ?></span>
+                    <label for="_use_price_matrix">
+                        <input type="checkbox" name="_use_price_matrix" id="_use_price_matrix" value="yes" <?php checked($use_price_matrix, 'yes'); ?>>
+                        <strong><?php _e('Use Price Matrix', 'decor'); ?></strong>
+                    </label>
+                    <span class="description" style="display: block; margin-top: 5px;">
+                        <?php _e('Enable to use a price lookup table instead of additive pricing. Each attribute combination has a specific price.', 'decor'); ?>
+                    </span>
+                </p>
+            </div>
+            
+            <!-- Price Matrix Table -->
+            <div class="options_group price-matrix-section" style="<?php echo $use_price_matrix !== 'yes' ? 'display:none;' : ''; ?>">
+                <p class="form-field">
+                    <strong><?php _e('Price Matrix', 'decor'); ?></strong><br>
+                    <span class="description"><?php _e('Define prices for each attribute combination. Leave price empty to skip that combination.', 'decor'); ?></span>
+                </p>
+                
+                <?php if (empty($attributes)) : ?>
+                    <p class="form-field">
+                        <em><?php _e('No attributes assigned to this product. Add attributes in the Attributes tab first.', 'decor'); ?></em>
+                    </p>
+                <?php else : 
+                    // Collect all attribute options
+                    $all_options = array();
+                    foreach ($attributes as $attribute) {
+                        $taxonomy = $attribute->get_name();
+                        $label = wc_attribute_label($taxonomy);
+                        $options = array();
+                        
+                        if ($attribute->is_taxonomy()) {
+                            $terms = wc_get_product_terms($product_id, $taxonomy, array('fields' => 'all'));
+                            foreach ($terms as $term) {
+                                $options[] = array('slug' => $term->slug, 'name' => $term->name);
+                            }
+                        } else {
+                            $custom_options = $attribute->get_options();
+                            foreach ($custom_options as $option) {
+                                $options[] = array('slug' => sanitize_title($option), 'name' => $option);
+                            }
+                        }
+                        
+                        if (!empty($options)) {
+                            $all_options[$taxonomy] = array(
+                                'label' => $label,
+                                'options' => $options
+                            );
+                        }
+                    }
+                ?>
+                
+                <div id="price-matrix-container" style="margin: 10px 0; max-height: 500px; overflow-y: auto;">
+                    <table class="widefat price-matrix-table" style="table-layout: auto;">
+                        <thead>
+                            <tr>
+                                <?php foreach ($all_options as $taxonomy => $data) : ?>
+                                    <th><?php echo esc_html($data['label']); ?></th>
+                                <?php endforeach; ?>
+                                <th style="width: 120px;"><?php _e('Price ($)', 'decor'); ?></th>
+                                <th style="width: 50px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="price-matrix-rows">
+                            <?php 
+                            $row_index = 0;
+                            foreach ($price_matrix as $row) : 
+                                $row_attrs = isset($row['attributes']) ? $row['attributes'] : array();
+                                $row_price = isset($row['price']) ? $row['price'] : '';
+                            ?>
+                                <tr class="matrix-row">
+                                    <?php foreach ($all_options as $taxonomy => $data) : 
+                                        $selected_value = isset($row_attrs[$taxonomy]) ? $row_attrs[$taxonomy] : '';
+                                    ?>
+                                        <td>
+                                            <select name="_price_matrix[<?php echo $row_index; ?>][attributes][<?php echo esc_attr($taxonomy); ?>]" style="width: 100%;">
+                                                <option value=""><?php _e('— Select —', 'decor'); ?></option>
+                                                <?php foreach ($data['options'] as $option) : ?>
+                                                    <option value="<?php echo esc_attr($option['slug']); ?>" <?php selected($selected_value, $option['slug']); ?>>
+                                                        <?php echo esc_html($option['name']); ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </td>
+                                    <?php endforeach; ?>
+                                    <td>
+                                        <input type="number" name="_price_matrix[<?php echo $row_index; ?>][price]" value="<?php echo esc_attr($row_price); ?>" step="0.01" style="width: 100%;">
+                                    </td>
+                                    <td>
+                                        <button type="button" class="button remove-matrix-row" style="color: #a00;">×</button>
+                                    </td>
+                                </tr>
+                            <?php 
+                                $row_index++;
+                            endforeach; 
+                            ?>
+                        </tbody>
+                    </table>
+                    
+                    <p style="margin-top: 10px;">
+                        <button type="button" class="button" id="add-matrix-row"><?php _e('+ Add Row', 'decor'); ?></button>
+                        <button type="button" class="button" id="generate-all-combinations" style="margin-left: 10px;"><?php _e('Generate All Combinations', 'decor'); ?></button>
+                    </p>
+                </div>
+                
+                <!-- Template row for JS -->
+                <script type="text/template" id="matrix-row-template">
+                    <tr class="matrix-row">
+                        <?php foreach ($all_options as $taxonomy => $data) : ?>
+                            <td>
+                                <select name="_price_matrix[{{INDEX}}][attributes][<?php echo esc_attr($taxonomy); ?>]" style="width: 100%;">
+                                    <option value=""><?php _e('— Select —', 'decor'); ?></option>
+                                    <?php foreach ($data['options'] as $option) : ?>
+                                        <option value="<?php echo esc_attr($option['slug']); ?>"><?php echo esc_html($option['name']); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </td>
+                        <?php endforeach; ?>
+                        <td>
+                            <input type="number" name="_price_matrix[{{INDEX}}][price]" value="" step="0.01" style="width: 100%;">
+                        </td>
+                        <td>
+                            <button type="button" class="button remove-matrix-row" style="color: #a00;">×</button>
+                        </td>
+                    </tr>
+                </script>
+                
+                <!-- All combinations data for JS -->
+                <script type="application/json" id="all-options-data">
+                    <?php echo json_encode($all_options); ?>
+                </script>
+                
+                <?php endif; ?>
+            </div>
+            
+            <!-- Additive Pricing Section (original) -->
+            <div class="options_group additive-pricing-section" style="<?php echo $use_price_matrix === 'yes' ? 'display:none;' : ''; ?>">
+                <p class="form-field">
+                    <strong><?php _e('Additive Attribute Pricing', 'decor'); ?></strong><br>
+                    <span class="description"><?php _e('Set price modifiers for attributes. Final price = Base Price + Sum of all modifiers.', 'decor'); ?></span>
                 </p>
                 
                 <?php if (empty($attributes)) : ?>
@@ -868,6 +1065,77 @@ class Decor_Attribute_Pricing {
                     
                     <script>
                     jQuery(document).ready(function($) {
+                        // Toggle between matrix and additive pricing
+                        $('#_use_price_matrix').on('change', function() {
+                            if ($(this).is(':checked')) {
+                                $('.price-matrix-section').show();
+                                $('.additive-pricing-section').hide();
+                            } else {
+                                $('.price-matrix-section').hide();
+                                $('.additive-pricing-section').show();
+                            }
+                        });
+                        
+                        // Add matrix row
+                        var rowIndex = <?php echo $row_index; ?>;
+                        $('#add-matrix-row').on('click', function() {
+                            var template = $('#matrix-row-template').html();
+                            template = template.replace(/\{\{INDEX\}\}/g, rowIndex);
+                            $('#price-matrix-rows').append(template);
+                            rowIndex++;
+                        });
+                        
+                        // Remove matrix row
+                        $(document).on('click', '.remove-matrix-row', function() {
+                            $(this).closest('tr').remove();
+                        });
+                        
+                        // Generate all combinations
+                        $('#generate-all-combinations').on('click', function() {
+                            if (!confirm('This will add rows for all possible attribute combinations. Continue?')) {
+                                return;
+                            }
+                            
+                            var allOptions = JSON.parse($('#all-options-data').text());
+                            var attrs = Object.keys(allOptions);
+                            
+                            if (attrs.length === 0) return;
+                            
+                            // Generate cartesian product of all options
+                            function cartesian(arrays) {
+                                return arrays.reduce(function(a, b) {
+                                    return a.flatMap(function(d) {
+                                        return b.map(function(e) {
+                                            return [].concat(d, e);
+                                        });
+                                    });
+                                }, [[]]);
+                            }
+                            
+                            var optionArrays = attrs.map(function(attr) {
+                                return allOptions[attr].options.map(function(opt) {
+                                    return { attr: attr, slug: opt.slug, name: opt.name };
+                                });
+                            });
+                            
+                            var combinations = cartesian(optionArrays);
+                            
+                            // Add rows for each combination
+                            combinations.forEach(function(combo) {
+                                var template = $('#matrix-row-template').html();
+                                template = template.replace(/\{\{INDEX\}\}/g, rowIndex);
+                                var $row = $(template);
+                                
+                                combo.forEach(function(item) {
+                                    $row.find('select[name*="[' + item.attr + ']"]').val(item.slug);
+                                });
+                                
+                                $('#price-matrix-rows').append($row);
+                                rowIndex++;
+                            });
+                        });
+                        
+                        // Per-variation toggle (additive pricing)
                         $('.price-per-variation-toggle').on('change', function() {
                             var taxonomy = $(this).data('taxonomy');
                             var isChecked = $(this).is(':checked');
@@ -897,6 +1165,37 @@ class Decor_Attribute_Pricing {
      * Save product attribute pricing
      */
     public function save_product_attribute_pricing($product_id) {
+        // Save price matrix toggle
+        $use_price_matrix = isset($_POST['_use_price_matrix']) ? 'yes' : 'no';
+        update_post_meta($product_id, '_use_price_matrix', $use_price_matrix);
+        
+        // Save price matrix data
+        if (isset($_POST['_price_matrix']) && is_array($_POST['_price_matrix'])) {
+            $matrix_data = array();
+            foreach ($_POST['_price_matrix'] as $row) {
+                $attributes = isset($row['attributes']) ? $row['attributes'] : array();
+                $price = isset($row['price']) ? $row['price'] : '';
+                
+                // Only save rows with at least one attribute selected
+                $has_selection = false;
+                $clean_attrs = array();
+                foreach ($attributes as $attr => $value) {
+                    if (!empty($value)) {
+                        $has_selection = true;
+                        $clean_attrs[sanitize_text_field($attr)] = sanitize_text_field($value);
+                    }
+                }
+                
+                if ($has_selection) {
+                    $matrix_data[] = array(
+                        'attributes' => $clean_attrs,
+                        'price' => $price !== '' ? floatval($price) : '',
+                    );
+                }
+            }
+            update_post_meta($product_id, '_price_matrix', $matrix_data);
+        }
+        
         if (isset($_POST['_product_attribute_pricing'])) {
             $pricing_data = array();
             
@@ -990,6 +1289,62 @@ class Decor_Attribute_Pricing {
         }
         
         return array();
+    }
+    
+    /**
+     * Check if product uses price matrix
+     */
+    public static function uses_price_matrix($product_id) {
+        return get_post_meta($product_id, '_use_price_matrix', true) === 'yes';
+    }
+    
+    /**
+     * Get price from matrix for given attribute combination
+     * Returns false if no match found
+     */
+    public static function get_matrix_price($product_id, $selections) {
+        if (!self::uses_price_matrix($product_id)) {
+            return false;
+        }
+        
+        $matrix = get_post_meta($product_id, '_price_matrix', true);
+        if (!is_array($matrix) || empty($matrix)) {
+            return false;
+        }
+        
+        // Normalize selections (lowercase, sanitized)
+        $normalized_selections = array();
+        foreach ($selections as $attr => $value) {
+            $attr_key = sanitize_title(str_replace('pa_', '', $attr));
+            $normalized_selections[$attr_key] = sanitize_title($value);
+        }
+        
+        // Find matching row in matrix
+        foreach ($matrix as $row) {
+            if (!isset($row['price']) || $row['price'] === '') {
+                continue;
+            }
+            
+            $match = true;
+            $row_attrs = isset($row['attributes']) ? $row['attributes'] : array();
+            
+            // Check if all row attributes match selections
+            foreach ($row_attrs as $attr => $value) {
+                $attr_key = sanitize_title($attr);
+                $value_key = sanitize_title($value);
+                
+                if (!isset($normalized_selections[$attr_key]) || $normalized_selections[$attr_key] !== $value_key) {
+                    $match = false;
+                    break;
+                }
+            }
+            
+            if ($match && count($row_attrs) > 0) {
+                return floatval($row['price']);
+            }
+        }
+        
+        return false;
     }
 }
 
