@@ -1,0 +1,428 @@
+/**
+ * Fabric Variations - West Elm Style
+ * Professional B2B design
+ */
+
+:root {
+    --decor-primary: #1a1a1a;
+    --decor-secondary: #666;
+    --decor-border: #e5e5e5;
+    --decor-bg: #f8f8f8;
+    --decor-white: #fff;
+    --decor-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* ===== Main Container ===== */
+.decor-fabric-selector {
+    font-family: var(--decor-font);
+    border: 1px solid var(--decor-border);
+    background: var(--decor-white);
+    margin-bottom: 20px;
+}
+
+/* ===== Collapsible Header ===== */
+.fabric-selector-header {
+    display: flex;
+    align-items: center;
+    padding: 16px 20px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--decor-border);
+}
+
+.header-content {
+    flex: 1;
+    font-size: 15px;
+}
+
+.header-label {
+    color: var(--decor-secondary);
+}
+
+.header-selection {
+    color: var(--decor-primary);
+    font-weight: 500;
+    margin-left: 5px;
+}
+
+.header-swatch {
+    width: 50px;
+    height: 50px;
+    margin: 0 15px;
+    border: 1px solid var(--decor-border);
+}
+
+.header-swatch img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.header-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+    display: flex;
+    transition: transform 0.2s;
+}
+
+.header-toggle[aria-expanded="false"] {
+    transform: rotate(180deg);
+}
+
+/* ===== Body (Expandable) ===== */
+.fabric-selector-body {
+    display: block;
+}
+
+.fabric-selector-body.collapsed {
+    display: none;
+}
+
+/* ===== Two Column Layout ===== */
+.fabric-selector-columns {
+    display: flex;
+}
+
+/* Left Column - Details */
+.fabric-details-column {
+    width: 350px;
+    min-width: 350px;
+    border-right: 1px solid var(--decor-border);
+    background: var(--decor-white);
+}
+
+.fabric-detail-image-wrap {
+    width: 100%;
+    aspect-ratio: 1;
+    background: var(--decor-bg);
+    overflow: hidden;
+}
+
+.fabric-detail-image-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.fabric-detail-content {
+    padding: 20px;
+}
+
+.fabric-detail-title {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--decor-primary);
+    margin: 0 0 10px 0;
+    line-height: 1.4;
+}
+
+.fabric-detail-desc {
+    font-size: 14px;
+    color: var(--decor-secondary);
+    line-height: 1.6;
+    margin: 0 0 15px 0;
+}
+
+.fabric-detail-specs {
+    font-size: 14px;
+}
+
+.spec-line {
+    margin-bottom: 5px;
+    color: var(--decor-primary);
+    display: none;
+}
+
+.spec-line.visible {
+    display: block;
+}
+
+.spec-line strong {
+    font-weight: 600;
+}
+
+.spec-line span {
+    color: var(--decor-secondary);
+}
+
+/* Right Column - Swatches */
+.fabric-swatches-column {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    max-height: 700px;
+}
+
+.swatches-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--decor-border);
+    background: var(--decor-white);
+}
+
+.swatches-title {
+    font-size: 15px;
+    color: var(--decor-primary);
+}
+
+.swatches-count {
+    font-size: 13px;
+    color: var(--decor-secondary);
+}
+
+/* Filters */
+.swatches-filters {
+    display: flex;
+    gap: 10px;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--decor-border);
+    background: var(--decor-white);
+}
+
+.filter-dropdown {
+    position: relative;
+}
+
+.filter-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: var(--decor-white);
+    border: 1px solid var(--decor-primary);
+    font-size: 13px;
+    font-weight: 400;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.filter-btn:hover {
+    background: var(--decor-bg);
+}
+
+.filter-btn.active {
+    background: var(--decor-primary);
+    color: var(--decor-white);
+}
+
+.filter-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    min-width: 160px;
+    background: var(--decor-white);
+    border: 1px solid var(--decor-border);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    z-index: 100;
+    display: none;
+}
+
+.filter-dropdown.open .filter-dropdown-menu {
+    display: block;
+}
+
+.filter-option {
+    display: block;
+    width: 100%;
+    padding: 10px 15px;
+    background: none;
+    border: none;
+    text-align: left;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.filter-option:hover {
+    background: var(--decor-bg);
+}
+
+.filter-option.active {
+    font-weight: 600;
+}
+
+/* Swatches Grid Container */
+.swatches-grid-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.fabric-category-section {
+    margin-bottom: 25px;
+}
+
+.fabric-category-section:last-child {
+    margin-bottom: 0;
+}
+
+.category-title {
+    font-size: 18px;
+    font-weight: 400;
+    text-align: center;
+    margin: 0 0 15px 0;
+    color: var(--decor-primary);
+}
+
+/* Swatches Grid */
+.swatches-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+}
+
+@media (max-width: 1200px) {
+    .swatches-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.swatch-item {
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.swatch-item.hidden {
+    display: none !important;
+}
+
+.swatch-image {
+    aspect-ratio: 1;
+    border: 2px solid transparent;
+    overflow: hidden;
+    transition: border-color 0.15s;
+    margin-bottom: 8px;
+}
+
+.swatch-item:hover .swatch-image,
+.swatch-item.selected .swatch-image {
+    border-color: var(--decor-primary);
+}
+
+.swatch-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.swatch-placeholder {
+    width: 100%;
+    height: 100%;
+    background: var(--decor-bg);
+}
+
+.swatch-label {
+    text-align: center;
+}
+
+.swatch-color {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--decor-primary);
+    margin-bottom: 2px;
+}
+
+.swatch-fabric {
+    display: block;
+    font-size: 12px;
+    color: var(--decor-secondary);
+    line-height: 1.3;
+}
+
+/* Order Swatches */
+.order-swatches-wrap {
+    padding: 15px 20px;
+    border-top: 1px solid var(--decor-border);
+    background: var(--decor-bg);
+}
+
+.order-swatches-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 14px 20px;
+    background: var(--decor-white);
+    border: 1px solid var(--decor-primary);
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.order-swatches-btn:hover {
+    background: var(--decor-primary);
+    color: var(--decor-white);
+}
+
+/* ===== Hide WooCommerce Default Variations ===== */
+.variations_form .variations {
+    display: none !important;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 900px) {
+    .fabric-selector-columns {
+        flex-direction: column;
+    }
+    
+    .fabric-details-column {
+        width: 100%;
+        min-width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--decor-border);
+        display: flex;
+    }
+    
+    .fabric-detail-image-wrap {
+        width: 150px;
+        min-width: 150px;
+        aspect-ratio: 1;
+    }
+    
+    .fabric-detail-content {
+        flex: 1;
+        padding: 15px;
+    }
+    
+    .fabric-swatches-column {
+        max-height: none;
+    }
+    
+    .swatches-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .swatches-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* ===== Scrollbar ===== */
+.swatches-grid-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.swatches-grid-container::-webkit-scrollbar-track {
+    background: var(--decor-bg);
+}
+
+.swatches-grid-container::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 3px;
+}
+
+.swatches-grid-container::-webkit-scrollbar-thumb:hover {
+    background: #999;
+}

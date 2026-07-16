@@ -1,0 +1,65 @@
+/**
+ * Admin Fabric Variations Styles
+ */
+
+.decor-variation-fields {
+    background: #f9f9f9;
+    padding: 15px;
+    border-radius: 4px;
+    margin-top: 15px;
+}
+
+.decor-variation-fields h4 {
+    color: #23282d;
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0 0 15px 0;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #ddd;
+}
+
+.decor-variation-fields .form-row {
+    margin-bottom: 12px;
+}
+
+.decor-variation-fields .form-row label {
+    font-weight: 500;
+    color: #23282d;
+}
+
+.decor-variation-fields .form-row input,
+.decor-variation-fields .form-row select,
+.decor-variation-fields .form-row textarea {
+    width: 100%;
+}
+
+.decor-variation-fields .form-row textarea {
+    min-height: 60px;
+}
+
+.swatch-image-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 5px;
+}
+
+.upload-swatch-image,
+.remove-swatch-image {
+    padding: 5px 10px;
+    font-size: 12px;
+}
+
+.swatch-image-preview img {
+    max-width: 80px;
+    height: auto;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.decor-variation-fields .description {
+    font-size: 12px;
+    color: #666;
+    font-style: italic;
+    margin-top: 4px;
+}

@@ -1,0 +1,714 @@
+/**
+ * Fabric Variations Styles
+ * West Elm inspired design
+ */
+
+/* ===== Variables ===== */
+:root {
+    --decor-primary: #1a1a1a;
+    --decor-secondary: #666;
+    --decor-border: #e5e5e5;
+    --decor-bg-light: #f8f8f8;
+    --decor-accent: #000;
+    --decor-success: #2e7d32;
+    --decor-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --decor-transition: 0.2s ease;
+}
+
+/* ===== Fabric Selector Container ===== */
+.decor-fabric-selector {
+    font-family: var(--decor-font-family);
+    background: #fff;
+    border: 1px solid var(--decor-border);
+    margin-bottom: 30px;
+}
+
+.filter-count {
+    color: var(--decor-secondary);
+    font-size: 12px;
+}
+
+/* ===== Main Content Layout (Left Panel + Right Grid) ===== */
+.fabric-selector-content {
+    display: flex;
+    border-top: 1px solid var(--decor-border);
+}
+
+/* Left Panel - Fabric Details */
+.fabric-detail-panel {
+    width: 320px;
+    min-width: 320px;
+    border-right: 1px solid var(--decor-border);
+    background: #fff;
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+}
+
+.fabric-detail-image {
+    width: 100%;
+    aspect-ratio: 1;
+    overflow: hidden;
+    background: var(--decor-bg-light);
+}
+
+.fabric-detail-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.fabric-detail-info {
+    padding: 20px;
+}
+
+.fabric-detail-name {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--decor-primary);
+    margin: 0 0 12px 0;
+    line-height: 1.4;
+}
+
+.fabric-detail-description {
+    font-size: 14px;
+    color: var(--decor-secondary);
+    line-height: 1.6;
+    margin: 0 0 16px 0;
+}
+
+.fabric-detail-specs {
+    font-size: 14px;
+}
+
+.detail-spec {
+    margin-bottom: 6px;
+    color: var(--decor-primary);
+}
+
+.detail-spec .spec-label {
+    font-weight: 600;
+}
+
+.detail-spec .spec-value {
+    color: var(--decor-secondary);
+}
+
+/* Right Panel - Swatches */
+.fabric-swatches-panel {
+    flex: 1;
+    padding: 0;
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.fabric-swatches-panel .fabric-filters {
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 10;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--decor-border);
+}
+
+.fabric-swatches-panel .fabric-categories-container {
+    padding: 20px;
+}
+
+@media (max-width: 900px) {
+    .fabric-selector-content {
+        flex-direction: column;
+    }
+    
+    .fabric-detail-panel {
+        width: 100%;
+        min-width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--decor-border);
+        display: flex;
+    }
+    
+    .fabric-detail-image {
+        width: 150px;
+        min-width: 150px;
+        aspect-ratio: 1;
+    }
+    
+    .fabric-detail-info {
+        flex: 1;
+        padding: 15px;
+    }
+}
+
+/* ===== Header ===== */
+.fabric-selector-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--decor-border);
+    cursor: pointer;
+}
+
+.fabric-selector-title {
+    font-size: 18px;
+    font-weight: 400;
+    letter-spacing: 0.5px;
+    margin: 0;
+    color: var(--decor-primary);
+}
+
+.fabric-choices-count {
+    font-size: 14px;
+    color: var(--decor-secondary);
+    margin-right: auto;
+    margin-left: 20px;
+}
+
+.fabric-selector-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform var(--decor-transition);
+}
+
+.fabric-selector-toggle[aria-expanded="false"] .toggle-icon {
+    transform: rotate(180deg);
+}
+
+/* ===== Filters ===== */
+.fabric-filters {
+    display: flex;
+    gap: 12px;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--decor-border);
+}
+
+.filter-dropdown {
+    position: relative;
+}
+
+.filter-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: #fff;
+    border: 1px solid var(--decor-primary);
+    font-size: 14px;
+    font-weight: 400;
+    cursor: pointer;
+    transition: all var(--decor-transition);
+}
+
+.filter-btn:hover {
+    background: var(--decor-bg-light);
+}
+
+.filter-btn.active {
+    background: var(--decor-primary);
+    color: #fff;
+}
+
+.filter-dropdown-content {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    min-width: 180px;
+    background: #fff;
+    border: 1px solid var(--decor-border);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+    display: none;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.filter-dropdown.open .filter-dropdown-content {
+    display: block;
+}
+
+.filter-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 12px 16px;
+    background: none;
+    border: none;
+    text-align: right;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background var(--decor-transition);
+}
+
+.filter-option:hover {
+    background: var(--decor-bg-light);
+}
+
+.filter-option.active {
+    font-weight: 600;
+}
+
+.color-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 1px solid var(--decor-border);
+}
+
+.color-dot.color-white { background: #f5f5f0; }
+.color-dot.color-gray { background: #888; }
+.color-dot.color-black { background: #1a1a1a; }
+.color-dot.color-blue { background: #3d5a80; }
+.color-dot.color-green { background: #4a7c59; }
+.color-dot.color-brown { background: #8b7355; }
+.color-dot.color-red { background: #c44536; }
+.color-dot.color-yellow { background: #d4a373; }
+.color-dot.color-purple { background: #7b5e7b; }
+
+/* ===== Fabric Info Panel ===== */
+.fabric-info-panel {
+    display: flex;
+    gap: 24px;
+    padding: 24px;
+    background: var(--decor-bg-light);
+    border-bottom: 1px solid var(--decor-border);
+}
+
+.fabric-info-image {
+    flex-shrink: 0;
+}
+
+.fabric-preview-image {
+    width: 200px;
+    height: 200px;
+    object-fit: cover;
+}
+
+.fabric-info-details {
+    flex: 1;
+}
+
+.fabric-info-name {
+    font-size: 18px;
+    font-weight: 500;
+    margin: 0 0 8px 0;
+    color: var(--decor-primary);
+}
+
+.fabric-info-description {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--decor-secondary);
+    margin: 0 0 16px 0;
+}
+
+.fabric-info-specs {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.spec-item {
+    font-size: 14px;
+    color: var(--decor-primary);
+}
+
+.spec-item strong {
+    font-weight: 500;
+    margin-left: 8px;
+}
+
+.spec-item .spec-value {
+    color: var(--decor-secondary);
+}
+
+/* ===== Fabric Categories ===== */
+.fabric-categories-container {
+    padding: 24px;
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.fabric-category {
+    margin-bottom: 32px;
+}
+
+.fabric-category:last-child {
+    margin-bottom: 0;
+}
+
+.fabric-category-title {
+    font-size: 20px;
+    font-weight: 400;
+    text-align: center;
+    margin: 0 0 20px 0;
+    color: var(--decor-primary);
+    letter-spacing: 0.5px;
+}
+
+/* ===== Fabric Swatches Grid ===== */
+.fabric-swatches-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+
+@media (max-width: 768px) {
+    .fabric-swatches-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .fabric-swatches-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.fabric-swatch {
+    cursor: pointer;
+    transition: all var(--decor-transition);
+    position: relative;
+}
+
+.fabric-swatch.hidden {
+    display: none;
+}
+
+/* Tooltip removed - using left panel instead */
+
+/* ===== Hide Default WooCommerce Variations ===== */
+.decor-fabric-selector ~ .variations_form .variations,
+.decor-fabric-selector ~ .variations_form table.variations,
+.variations_form .variations {
+    display: none !important;
+}
+
+/* Show only the add to cart button */
+.variations_form .single_variation_wrap {
+    display: block !important;
+}
+
+.variations_form .woocommerce-variation-add-to-cart {
+    display: flex !important;
+    align-items: center;
+    gap: 15px;
+}
+
+.swatch-image-wrapper {
+    position: relative;
+    padding-bottom: 100%;
+    border: 2px solid transparent;
+    transition: border-color var(--decor-transition);
+    overflow: hidden;
+}
+
+.fabric-swatch:hover .swatch-image-wrapper,
+.fabric-swatch.selected .swatch-image-wrapper {
+    border-color: var(--decor-primary);
+}
+
+.swatch-image-wrapper img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.swatch-placeholder {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--decor-bg-light);
+}
+
+.swatch-info {
+    padding: 10px 0;
+    text-align: center;
+}
+
+.swatch-name {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--decor-primary);
+    margin-bottom: 2px;
+}
+
+.swatch-fabric {
+    display: block;
+    font-size: 12px;
+    color: var(--decor-secondary);
+}
+
+/* ===== Order Swatches ===== */
+.order-swatches-section {
+    padding: 20px 24px;
+    border-top: 1px solid var(--decor-border);
+}
+
+.order-swatches-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 16px;
+    background: #fff;
+    border: 1px solid var(--decor-primary);
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all var(--decor-transition);
+}
+
+.order-swatches-btn:hover {
+    background: var(--decor-primary);
+    color: #fff;
+}
+
+.order-swatches-btn svg {
+    stroke: currentColor;
+}
+
+/* ===== Selection Summary ===== */
+.decor-selection-summary {
+    background: var(--decor-bg-light);
+    padding: 30px;
+    margin-bottom: 30px;
+}
+
+.selection-summary-inner {
+    max-width: 100%;
+}
+
+.selection-summary-title {
+    font-size: 24px;
+    font-weight: 400;
+    font-style: italic;
+    margin: 0 0 24px 0;
+    color: var(--decor-primary);
+}
+
+.selection-summary-content {
+    display: flex;
+    justify-content: space-between;
+    gap: 30px;
+}
+
+.selection-items {
+    flex: 1;
+}
+
+.selection-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--decor-border);
+}
+
+.selection-item:last-child {
+    border-bottom: none;
+}
+
+.selection-label {
+    font-size: 14px;
+    color: var(--decor-secondary);
+    min-width: 80px;
+}
+
+.selection-value {
+    font-size: 14px;
+    color: var(--decor-primary);
+}
+
+.selection-value a {
+    color: var(--decor-primary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.selection-value a:hover {
+    text-decoration: none;
+}
+
+.selection-check {
+    color: var(--decor-success);
+    margin-right: auto;
+}
+
+.selection-preview {
+    flex-shrink: 0;
+}
+
+.selection-preview-image {
+    width: 180px;
+    height: 120px;
+    object-fit: cover;
+    background: #fff;
+}
+
+/* ===== Fabric Details in Summary ===== */
+.selection-fabric-details {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--decor-border);
+}
+
+.fabric-detail-row {
+    display: flex;
+    gap: 12px;
+    padding: 6px 0;
+    font-size: 13px;
+}
+
+.fabric-detail-row .detail-label {
+    color: var(--decor-secondary);
+    min-width: 80px;
+}
+
+.fabric-detail-row .detail-value {
+    color: var(--decor-primary);
+}
+
+/* ===== Price Summary ===== */
+.selection-price-summary {
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 2px solid var(--decor-border);
+}
+
+.price-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    font-size: 14px;
+}
+
+.price-row.total-price {
+    font-size: 18px;
+    font-weight: 600;
+    padding-top: 16px;
+    border-top: 1px solid var(--decor-border);
+    margin-top: 8px;
+}
+
+/* ===== Animations ===== */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fabric-swatch {
+    animation: fadeIn 0.3s ease forwards;
+}
+
+.fabric-info-panel {
+    animation: fadeIn 0.3s ease forwards;
+}
+
+/* ===== Scrollbar Styling ===== */
+.fabric-categories-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.fabric-categories-container::-webkit-scrollbar-track {
+    background: var(--decor-bg-light);
+}
+
+.fabric-categories-container::-webkit-scrollbar-thumb {
+    background: var(--decor-border);
+    border-radius: 3px;
+}
+
+.fabric-categories-container::-webkit-scrollbar-thumb:hover {
+    background: var(--decor-secondary);
+}
+
+/* ===== Loading State ===== */
+.decor-fabric-selector.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.decor-fabric-selector.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 30px;
+    height: 30px;
+    margin: -15px 0 0 -15px;
+    border: 2px solid var(--decor-border);
+    border-top-color: var(--decor-primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ===== Hide Default WooCommerce Variations ===== */
+.decor-fabric-selector ~ .variations_form .variations {
+    display: none;
+}
+
+/* ===== Responsive Adjustments ===== */
+@media (max-width: 768px) {
+    .fabric-info-panel {
+        flex-direction: column;
+    }
+    
+    .fabric-preview-image {
+        width: 100%;
+        height: 200px;
+    }
+    
+    .selection-summary-content {
+        flex-direction: column-reverse;
+    }
+    
+    .selection-preview-image {
+        width: 100%;
+        height: auto;
+    }
+    
+    /* Hide tooltips on mobile - use tap instead */
+    .fabric-swatch .swatch-tooltip {
+        display: none;
+    }
+}
+
+/* ===== Color dots for filter ===== */
+.filter-option .color-swatch {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 8px;
+    border: 1px solid var(--decor-border);
+}
