@@ -849,9 +849,15 @@ class Decor_Attribute_Pricing {
                     }
                 ?>
                 
-                <div id="price-matrix-container" style="margin: 10px 0; max-height: 500px; overflow-y: auto;">
+                <!-- Search/Filter -->
+                <div style="margin: 10px 0; display: flex; gap: 10px; align-items: center;">
+                    <input type="text" id="matrix-search" placeholder="<?php _e('Search...', 'decor'); ?>" style="width: 200px;">
+                    <span id="matrix-count" style="color: #666;"></span>
+                </div>
+                
+                <div id="price-matrix-container" style="margin: 10px 0; max-height: 400px; overflow-y: auto;">
                     <table class="widefat price-matrix-table" style="table-layout: auto;">
-                        <thead>
+                        <thead style="position: sticky; top: 0; background: #fff; z-index: 1;">
                             <tr>
                                 <?php foreach ($all_options as $taxonomy => $data) : ?>
                                     <th><?php echo esc_html($data['label']); ?></th>
@@ -1090,18 +1096,51 @@ class Decor_Attribute_Pricing {
                             $(this).closest('tr').remove();
                         });
                         
-                        // Generate all combinations
+                        // Search/filter rows
+                        var searchTimeout;
+                        $('#matrix-search').on('input', function() {
+                            clearTimeout(searchTimeout);
+                            var query = $(this).val().toLowerCase();
+                            searchTimeout = setTimeout(function() {
+                                var visible = 0;
+                                $('#price-matrix-rows tr').each(function() {
+                                    var text = $(this).text().toLowerCase();
+                                    if (query === '' || text.indexOf(query) > -1) {
+                                        $(this).show();
+                                        visible++;
+                                    } else {
+                                        $(this).hide();
+                                    }
+                                });
+                                $('#matrix-count').text(visible + ' rows');
+                            }, 200);
+                        });
+                        
+                        // Update count on load
+                        $('#matrix-count').text($('#price-matrix-rows tr').length + ' rows');
+                        
+                        // Generate all combinations (batched for performance)
                         $('#generate-all-combinations').on('click', function() {
-                            if (!confirm('This will add rows for all possible attribute combinations. Continue?')) {
+                            var total = 1;
+                            var allOptions = JSON.parse($('#all-options-data').text());
+                            Object.keys(allOptions).forEach(function(attr) {
+                                total *= allOptions[attr].options.length;
+                            });
+                            
+                            if (!confirm('This will add ' + total + ' rows. Continue?')) {
                                 return;
                             }
                             
-                            var allOptions = JSON.parse($('#all-options-data').text());
+                            var $btn = $(this);
+                            $btn.prop('disabled', true).text('Generating...');
+                            
                             var attrs = Object.keys(allOptions);
+                            if (attrs.length === 0) {
+                                $btn.prop('disabled', false).text('Generate All Combinations');
+                                return;
+                            }
                             
-                            if (attrs.length === 0) return;
-                            
-                            // Generate cartesian product of all options
+                            // Generate cartesian product
                             function cartesian(arrays) {
                                 return arrays.reduce(function(a, b) {
                                     return a.flatMap(function(d) {
@@ -1120,19 +1159,41 @@ class Decor_Attribute_Pricing {
                             
                             var combinations = cartesian(optionArrays);
                             
-                            // Add rows for each combination
-                            combinations.forEach(function(combo) {
-                                var template = $('#matrix-row-template').html();
-                                template = template.replace(/\{\{INDEX\}\}/g, rowIndex);
-                                var $row = $(template);
+                            // Add rows in batches to prevent UI freeze
+                            var batchSize = 20;
+                            var index = 0;
+                            var fragment = document.createDocumentFragment();
+                            
+                            function addBatch() {
+                                var end = Math.min(index + batchSize, combinations.length);
                                 
-                                combo.forEach(function(item) {
-                                    $row.find('select[name*="[' + item.attr + ']"]').val(item.slug);
-                                });
+                                for (var i = index; i < end; i++) {
+                                    var combo = combinations[i];
+                                    var template = $('#matrix-row-template').html();
+                                    template = template.replace(/\{\{INDEX\}\}/g, rowIndex);
+                                    var $row = $(template);
+                                    
+                                    combo.forEach(function(item) {
+                                        $row.find('select[name*="[' + item.attr + ']"]').val(item.slug);
+                                    });
+                                    
+                                    fragment.appendChild($row[0]);
+                                    rowIndex++;
+                                }
                                 
-                                $('#price-matrix-rows').append($row);
-                                rowIndex++;
-                            });
+                                index = end;
+                                $btn.text('Generating... ' + Math.round(index/combinations.length*100) + '%');
+                                
+                                if (index < combinations.length) {
+                                    requestAnimationFrame(addBatch);
+                                } else {
+                                    $('#price-matrix-rows').append(fragment);
+                                    $('#matrix-count').text(rowIndex + ' rows');
+                                    $btn.prop('disabled', false).text('Generate All Combinations');
+                                }
+                            }
+                            
+                            addBatch();
                         });
                         
                         // Per-variation toggle (additive pricing)
