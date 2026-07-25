@@ -451,6 +451,14 @@ class Decor_Attribute_Pricing {
         
         // Check if product uses price matrix
         $matrix_price = self::get_matrix_price($product_id, $selections);
+        
+        // Debug logging (remove in production)
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Matrix Price Check - Product: ' . $product_id);
+            error_log('Selections: ' . print_r($selections, true));
+            error_log('Matrix Price Result: ' . ($matrix_price !== false ? $matrix_price : 'false'));
+        }
+        
         if ($matrix_price !== false) {
             // Build breakdown for matrix pricing
             $breakdown = array();
@@ -1370,14 +1378,29 @@ class Decor_Attribute_Pricing {
         
         $matrix = get_post_meta($product_id, '_price_matrix', true);
         if (!is_array($matrix) || empty($matrix)) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Matrix is empty or not array for product ' . $product_id);
+            }
             return false;
         }
         
-        // Normalize selections (lowercase, sanitized)
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Matrix data: ' . print_r($matrix, true));
+        }
+        
+        // Normalize selections - create multiple key formats for matching
         $normalized_selections = array();
         foreach ($selections as $attr => $value) {
-            $attr_key = sanitize_title(str_replace('pa_', '', $attr));
-            $normalized_selections[$attr_key] = sanitize_title($value);
+            // Remove pa_ prefix and sanitize
+            $attr_clean = str_replace('pa_', '', $attr);
+            $attr_key = sanitize_title($attr_clean);
+            $value_key = sanitize_title($value);
+            
+            // Store with multiple possible key formats
+            $normalized_selections[$attr_key] = $value_key;
+            $normalized_selections[$attr_clean] = $value_key;
+            $normalized_selections[$attr] = $value_key;
+            $normalized_selections['pa_' . $attr_key] = $value_key;
         }
         
         // Find matching row in matrix
@@ -1389,18 +1412,32 @@ class Decor_Attribute_Pricing {
             $match = true;
             $row_attrs = isset($row['attributes']) ? $row['attributes'] : array();
             
+            if (empty($row_attrs)) {
+                continue;
+            }
+            
             // Check if all row attributes match selections
             foreach ($row_attrs as $attr => $value) {
-                $attr_key = sanitize_title($attr);
+                $attr_key = sanitize_title(str_replace('pa_', '', $attr));
                 $value_key = sanitize_title($value);
                 
-                if (!isset($normalized_selections[$attr_key]) || $normalized_selections[$attr_key] !== $value_key) {
+                // Try to find match in normalized selections
+                $found = false;
+                foreach ($normalized_selections as $sel_attr => $sel_value) {
+                    $sel_attr_clean = sanitize_title(str_replace('pa_', '', $sel_attr));
+                    if ($sel_attr_clean === $attr_key && $sel_value === $value_key) {
+                        $found = true;
+                        break;
+                    }
+                }
+                
+                if (!$found) {
                     $match = false;
                     break;
                 }
             }
             
-            if ($match && count($row_attrs) > 0) {
+            if ($match) {
                 return floatval($row['price']);
             }
         }
