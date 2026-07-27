@@ -833,7 +833,8 @@ class Decor_Attribute_Pricing {
                     $size_options = array();
                     $size_taxonomy = '';
                     
-                    // Collect all unique groups from attributes
+                    // Collect all attribute groups (non-SIZE attributes)
+                    // The GROUP is the attribute NAME itself (e.g., "TREVISO FABRIC GRADE 1")
                     $all_groups = array();
                     
                     foreach ($attributes as $attribute) {
@@ -855,21 +856,20 @@ class Decor_Attribute_Pricing {
                                 }
                             }
                         } else {
-                            // For other attributes, collect their groups
-                            if ($attribute->is_taxonomy()) {
-                                $terms = wc_get_product_terms($product_id, $taxonomy, array('fields' => 'all'));
-                                foreach ($terms as $term) {
-                                    $group = get_term_meta($term->term_id, 'attribute_group', true);
-                                    if (!empty($group) && !in_array($group, $all_groups)) {
-                                        $all_groups[] = $group;
-                                    }
-                                }
-                            }
+                            // Non-SIZE attributes ARE the groups
+                            // The attribute name/label IS the group name
+                            $all_groups[] = array(
+                                'taxonomy' => $taxonomy,
+                                'label' => $label,
+                                'slug' => sanitize_title($taxonomy)
+                            );
                         }
                     }
                     
-                    // Sort groups naturally
-                    sort($all_groups, SORT_NATURAL);
+                    // Sort groups by label
+                    usort($all_groups, function($a, $b) {
+                        return strnatcmp($a['label'], $b['label']);
+                    });
                     
                     // Also keep all_options for fallback
                     $all_options = array();
@@ -939,8 +939,8 @@ class Decor_Attribute_Pricing {
                                         <select name="_price_matrix[<?php echo $row_index; ?>][group]" style="width: 100%;">
                                             <option value=""><?php _e('— Select Group —', 'decor'); ?></option>
                                             <?php foreach ($all_groups as $group) : ?>
-                                                <option value="<?php echo esc_attr($group); ?>" <?php selected($row_group, $group); ?>>
-                                                    <?php echo esc_html($group); ?>
+                                                <option value="<?php echo esc_attr($group['taxonomy']); ?>" <?php selected($row_group, $group['taxonomy']); ?>>
+                                                    <?php echo esc_html($group['label']); ?>
                                                 </option>
                                             <?php endforeach; ?>
                                         </select>
@@ -980,7 +980,7 @@ class Decor_Attribute_Pricing {
                             <select name="_price_matrix[{{INDEX}}][group]" style="width: 100%;">
                                 <option value=""><?php _e('— Select Group —', 'decor'); ?></option>
                                 <?php foreach ($all_groups as $group) : ?>
-                                    <option value="<?php echo esc_attr($group); ?>"><?php echo esc_html($group); ?></option>
+                                    <option value="<?php echo esc_attr($group['taxonomy']); ?>"><?php echo esc_html($group['label']); ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </td>
@@ -999,11 +999,24 @@ class Decor_Attribute_Pricing {
                 </script>
                 
                 <?php else : ?>
-                <!-- FALLBACK: No groups defined, show message -->
-                <p class="form-field" style="color: #d63638;">
-                    <strong><?php _e('Groups not configured', 'decor'); ?></strong><br>
-                    <?php _e('To use Price Matrix, you need to set "Group" values for your fabric/material attributes. Go to Products → Attributes and edit each term to add a Group value.', 'decor'); ?>
-                </p>
+                <!-- FALLBACK: No groups defined -->
+                <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 4px; margin: 10px 0;">
+                    <strong style="color: #856404;"><?php _e('⚠️ Price Matrix Setup Required', 'decor'); ?></strong>
+                    <p style="margin: 10px 0 0; color: #856404;">
+                        <?php 
+                        if (empty($size_options)) {
+                            _e('No SIZE attribute found. Add an attribute with "size" in its name.', 'decor');
+                            echo '<br>';
+                        }
+                        if (empty($all_groups)) {
+                            _e('No attribute groups found. Go to Products → Attributes, edit each fabric/material term and set a "Group" value (e.g., "Grade 1", "Grade 2").', 'decor');
+                        }
+                        ?>
+                    </p>
+                    <p style="margin: 10px 0 0; font-size: 12px; color: #666;">
+                        <?php _e('Debug: Found ' . count($size_options) . ' sizes, ' . count($all_groups) . ' groups', 'decor'); ?>
+                    </p>
+                </div>
                 <?php endif; ?>
                 
                 <?php endif; ?>
@@ -1387,7 +1400,7 @@ class Decor_Attribute_Pricing {
     
     /**
      * Get price from matrix for given attribute combination (GROUP-BASED)
-     * Looks up price by SIZE + GROUP combination
+     * Looks up price by SIZE + GROUP (attribute taxonomy) combination
      * Returns false if no match found
      */
     public static function get_matrix_price($product_id, $selections) {
@@ -1400,9 +1413,9 @@ class Decor_Attribute_Pricing {
             return false;
         }
         
-        // Find SIZE value from selections
+        // Find SIZE value and collect selected attribute taxonomies (groups)
         $selected_size = '';
-        $selected_groups = array();
+        $selected_groups = array(); // These are the attribute taxonomies that have selections
         
         foreach ($selections as $attr => $value) {
             if (empty($value)) continue;
@@ -1414,15 +1427,11 @@ class Decor_Attribute_Pricing {
             if (stripos($attr_clean, 'size') !== false) {
                 $selected_size = $value_slug;
             } else {
-                // For other attributes, get their group
+                // The GROUP is the attribute taxonomy itself
+                // Store both with and without pa_ prefix for matching
                 $taxonomy = strpos($attr, 'pa_') === 0 ? $attr : 'pa_' . $attr;
-                $term = get_term_by('slug', $value_slug, $taxonomy);
-                if ($term) {
-                    $group = get_term_meta($term->term_id, 'attribute_group', true);
-                    if (!empty($group)) {
-                        $selected_groups[] = $group;
-                    }
-                }
+                $selected_groups[] = $taxonomy;
+                $selected_groups[] = str_replace('pa_', '', $taxonomy);
             }
         }
         
@@ -1433,9 +1442,10 @@ class Decor_Attribute_Pricing {
         // Debug logging
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log('Matrix lookup - Size: ' . $selected_size . ', Groups: ' . implode(', ', $selected_groups));
+            error_log('Matrix data: ' . print_r($matrix, true));
         }
         
-        // Find matching row in matrix by SIZE + GROUP
+        // Find matching row in matrix by SIZE + GROUP (attribute taxonomy)
         foreach ($matrix as $row) {
             if (!isset($row['price']) || $row['price'] === '') {
                 continue;
@@ -1449,10 +1459,12 @@ class Decor_Attribute_Pricing {
                 continue;
             }
             
-            // Check if any selected group matches
-            if (in_array($row_group, $selected_groups)) {
+            // Check if the row's group (attribute taxonomy) is in selected groups
+            // Try matching with and without pa_ prefix
+            $row_group_clean = str_replace('pa_', '', $row_group);
+            if (in_array($row_group, $selected_groups) || in_array($row_group_clean, $selected_groups) || in_array('pa_' . $row_group_clean, $selected_groups)) {
                 if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('Matrix match found! Price: ' . $row['price']);
+                    error_log('Matrix match found! Size: ' . $row_size . ', Group: ' . $row_group . ', Price: ' . $row['price']);
                 }
                 return floatval($row['price']);
             }
