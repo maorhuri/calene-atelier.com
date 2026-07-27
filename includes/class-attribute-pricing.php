@@ -820,8 +820,8 @@ class Decor_Attribute_Pricing {
             <!-- Price Matrix Table -->
             <div class="options_group price-matrix-section" style="<?php echo $use_price_matrix !== 'yes' ? 'display:none;' : ''; ?>">
                 <p class="form-field">
-                    <strong><?php _e('Price Matrix', 'decor'); ?></strong><br>
-                    <span class="description"><?php _e('Define prices for each attribute combination. Leave price empty to skip that combination.', 'decor'); ?></span>
+                    <strong><?php _e('Price Matrix by Groups', 'decor'); ?></strong><br>
+                    <span class="description"><?php _e('Define prices by SIZE + ATTRIBUTE GROUP combination. The group is determined by the attribute\'s "Group" field.', 'decor'); ?></span>
                 </p>
                 
                 <?php if (empty($attributes)) : ?>
@@ -829,7 +829,49 @@ class Decor_Attribute_Pricing {
                         <em><?php _e('No attributes assigned to this product. Add attributes in the Attributes tab first.', 'decor'); ?></em>
                     </p>
                 <?php else : 
-                    // Collect all attribute options
+                    // Collect SIZE attribute options
+                    $size_options = array();
+                    $size_taxonomy = '';
+                    
+                    // Collect all unique groups from attributes
+                    $all_groups = array();
+                    
+                    foreach ($attributes as $attribute) {
+                        $taxonomy = $attribute->get_name();
+                        $label = wc_attribute_label($taxonomy);
+                        
+                        // Check if this is SIZE attribute
+                        if (stripos($taxonomy, 'size') !== false || stripos($label, 'size') !== false) {
+                            $size_taxonomy = $taxonomy;
+                            if ($attribute->is_taxonomy()) {
+                                $terms = wc_get_product_terms($product_id, $taxonomy, array('fields' => 'all'));
+                                foreach ($terms as $term) {
+                                    $size_options[] = array('slug' => $term->slug, 'name' => $term->name);
+                                }
+                            } else {
+                                $custom_options = $attribute->get_options();
+                                foreach ($custom_options as $option) {
+                                    $size_options[] = array('slug' => sanitize_title($option), 'name' => $option);
+                                }
+                            }
+                        } else {
+                            // For other attributes, collect their groups
+                            if ($attribute->is_taxonomy()) {
+                                $terms = wc_get_product_terms($product_id, $taxonomy, array('fields' => 'all'));
+                                foreach ($terms as $term) {
+                                    $group = get_term_meta($term->term_id, 'attribute_group', true);
+                                    if (!empty($group) && !in_array($group, $all_groups)) {
+                                        $all_groups[] = $group;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Sort groups naturally
+                    sort($all_groups, SORT_NATURAL);
+                    
+                    // Also keep all_options for fallback
                     $all_options = array();
                     foreach ($attributes as $attribute) {
                         $taxonomy = $attribute->get_name();
@@ -857,7 +899,8 @@ class Decor_Attribute_Pricing {
                     }
                 ?>
                 
-                <!-- Search/Filter -->
+                <?php if (!empty($size_options) && !empty($all_groups)) : ?>
+                <!-- GROUP-BASED MATRIX (SIZE + GROUP) -->
                 <div style="margin: 10px 0; display: flex; gap: 10px; align-items: center;">
                     <input type="text" id="matrix-search" placeholder="<?php _e('Search...', 'decor'); ?>" style="width: 200px;">
                     <span id="matrix-count" style="color: #666;"></span>
@@ -867,9 +910,8 @@ class Decor_Attribute_Pricing {
                     <table class="widefat price-matrix-table" style="table-layout: auto;">
                         <thead style="position: sticky; top: 0; background: #fff; z-index: 1;">
                             <tr>
-                                <?php foreach ($all_options as $taxonomy => $data) : ?>
-                                    <th><?php echo esc_html($data['label']); ?></th>
-                                <?php endforeach; ?>
+                                <th><?php _e('SIZE', 'decor'); ?></th>
+                                <th><?php _e('Attribute Group', 'decor'); ?></th>
                                 <th style="width: 120px;"><?php _e('Price ($)', 'decor'); ?></th>
                                 <th style="width: 50px;"></th>
                             </tr>
@@ -878,24 +920,31 @@ class Decor_Attribute_Pricing {
                             <?php 
                             $row_index = 0;
                             foreach ($price_matrix as $row) : 
-                                $row_attrs = isset($row['attributes']) ? $row['attributes'] : array();
+                                $row_size = isset($row['size']) ? $row['size'] : '';
+                                $row_group = isset($row['group']) ? $row['group'] : '';
                                 $row_price = isset($row['price']) ? $row['price'] : '';
                             ?>
                                 <tr class="matrix-row">
-                                    <?php foreach ($all_options as $taxonomy => $data) : 
-                                        $selected_value = isset($row_attrs[$taxonomy]) ? $row_attrs[$taxonomy] : '';
-                                    ?>
-                                        <td>
-                                            <select name="_price_matrix[<?php echo $row_index; ?>][attributes][<?php echo esc_attr($taxonomy); ?>]" style="width: 100%;">
-                                                <option value=""><?php _e('— Select —', 'decor'); ?></option>
-                                                <?php foreach ($data['options'] as $option) : ?>
-                                                    <option value="<?php echo esc_attr($option['slug']); ?>" <?php selected($selected_value, $option['slug']); ?>>
-                                                        <?php echo esc_html($option['name']); ?>
-                                                    </option>
-                                                <?php endforeach; ?>
-                                            </select>
-                                        </td>
-                                    <?php endforeach; ?>
+                                    <td>
+                                        <select name="_price_matrix[<?php echo $row_index; ?>][size]" style="width: 100%;">
+                                            <option value=""><?php _e('— Select Size —', 'decor'); ?></option>
+                                            <?php foreach ($size_options as $option) : ?>
+                                                <option value="<?php echo esc_attr($option['slug']); ?>" <?php selected($row_size, $option['slug']); ?>>
+                                                    <?php echo esc_html($option['name']); ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <select name="_price_matrix[<?php echo $row_index; ?>][group]" style="width: 100%;">
+                                            <option value=""><?php _e('— Select Group —', 'decor'); ?></option>
+                                            <?php foreach ($all_groups as $group) : ?>
+                                                <option value="<?php echo esc_attr($group); ?>" <?php selected($row_group, $group); ?>>
+                                                    <?php echo esc_html($group); ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </td>
                                     <td>
                                         <input type="number" name="_price_matrix[<?php echo $row_index; ?>][price]" value="<?php echo esc_attr($row_price); ?>" step="0.01" style="width: 100%;">
                                     </td>
@@ -916,19 +965,25 @@ class Decor_Attribute_Pricing {
                     </p>
                 </div>
                 
-                <!-- Template row for JS -->
+                <!-- Template row for JS (GROUP-BASED) -->
                 <script type="text/template" id="matrix-row-template">
                     <tr class="matrix-row">
-                        <?php foreach ($all_options as $taxonomy => $data) : ?>
-                            <td>
-                                <select name="_price_matrix[{{INDEX}}][attributes][<?php echo esc_attr($taxonomy); ?>]" style="width: 100%;">
-                                    <option value=""><?php _e('— Select —', 'decor'); ?></option>
-                                    <?php foreach ($data['options'] as $option) : ?>
-                                        <option value="<?php echo esc_attr($option['slug']); ?>"><?php echo esc_html($option['name']); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </td>
-                        <?php endforeach; ?>
+                        <td>
+                            <select name="_price_matrix[{{INDEX}}][size]" style="width: 100%;">
+                                <option value=""><?php _e('— Select Size —', 'decor'); ?></option>
+                                <?php foreach ($size_options as $option) : ?>
+                                    <option value="<?php echo esc_attr($option['slug']); ?>"><?php echo esc_html($option['name']); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </td>
+                        <td>
+                            <select name="_price_matrix[{{INDEX}}][group]" style="width: 100%;">
+                                <option value=""><?php _e('— Select Group —', 'decor'); ?></option>
+                                <?php foreach ($all_groups as $group) : ?>
+                                    <option value="<?php echo esc_attr($group); ?>"><?php echo esc_html($group); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </td>
                         <td>
                             <input type="number" name="_price_matrix[{{INDEX}}][price]" value="" step="0.01" style="width: 100%;">
                         </td>
@@ -940,8 +995,16 @@ class Decor_Attribute_Pricing {
                 
                 <!-- All combinations data for JS -->
                 <script type="application/json" id="all-options-data">
-                    <?php echo json_encode($all_options); ?>
+                    <?php echo json_encode(array('sizes' => $size_options, 'groups' => $all_groups)); ?>
                 </script>
+                
+                <?php else : ?>
+                <!-- FALLBACK: No groups defined, show message -->
+                <p class="form-field" style="color: #d63638;">
+                    <strong><?php _e('Groups not configured', 'decor'); ?></strong><br>
+                    <?php _e('To use Price Matrix, you need to set "Group" values for your fabric/material attributes. Go to Products → Attributes and edit each term to add a Group value.', 'decor'); ?>
+                </p>
+                <?php endif; ?>
                 
                 <?php endif; ?>
             </div>
@@ -1127,81 +1190,43 @@ class Decor_Attribute_Pricing {
                         // Update count on load
                         $('#matrix-count').text($('#price-matrix-rows tr').length + ' rows');
                         
-                        // Generate all combinations (batched for performance)
+                        // Generate all combinations (SIZE x GROUP)
                         $('#generate-all-combinations').on('click', function() {
-                            var total = 1;
                             var allOptions = JSON.parse($('#all-options-data').text());
-                            Object.keys(allOptions).forEach(function(attr) {
-                                total *= allOptions[attr].options.length;
-                            });
+                            var sizes = allOptions.sizes || [];
+                            var groups = allOptions.groups || [];
                             
-                            if (!confirm('This will add ' + total + ' rows. Continue?')) {
+                            var total = sizes.length * groups.length;
+                            
+                            if (total === 0) {
+                                alert('No sizes or groups available.');
+                                return;
+                            }
+                            
+                            if (!confirm('This will add ' + total + ' rows (SIZE × GROUP). Continue?')) {
                                 return;
                             }
                             
                             var $btn = $(this);
                             $btn.prop('disabled', true).text('Generating...');
                             
-                            var attrs = Object.keys(allOptions);
-                            if (attrs.length === 0) {
-                                $btn.prop('disabled', false).text('Generate All Combinations');
-                                return;
-                            }
-                            
-                            // Generate cartesian product
-                            function cartesian(arrays) {
-                                return arrays.reduce(function(a, b) {
-                                    return a.flatMap(function(d) {
-                                        return b.map(function(e) {
-                                            return [].concat(d, e);
-                                        });
-                                    });
-                                }, [[]]);
-                            }
-                            
-                            var optionArrays = attrs.map(function(attr) {
-                                return allOptions[attr].options.map(function(opt) {
-                                    return { attr: attr, slug: opt.slug, name: opt.name };
-                                });
-                            });
-                            
-                            var combinations = cartesian(optionArrays);
-                            
-                            // Add rows in batches to prevent UI freeze
-                            var batchSize = 20;
-                            var index = 0;
-                            var fragment = document.createDocumentFragment();
-                            
-                            function addBatch() {
-                                var end = Math.min(index + batchSize, combinations.length);
-                                
-                                for (var i = index; i < end; i++) {
-                                    var combo = combinations[i];
+                            // Generate all SIZE x GROUP combinations
+                            sizes.forEach(function(size) {
+                                groups.forEach(function(group) {
                                     var template = $('#matrix-row-template').html();
                                     template = template.replace(/\{\{INDEX\}\}/g, rowIndex);
                                     var $row = $(template);
                                     
-                                    combo.forEach(function(item) {
-                                        $row.find('select[name*="[' + item.attr + ']"]').val(item.slug);
-                                    });
+                                    $row.find('select[name*="[size]"]').val(size.slug);
+                                    $row.find('select[name*="[group]"]').val(group);
                                     
-                                    fragment.appendChild($row[0]);
+                                    $('#price-matrix-rows').append($row);
                                     rowIndex++;
-                                }
-                                
-                                index = end;
-                                $btn.text('Generating... ' + Math.round(index/combinations.length*100) + '%');
-                                
-                                if (index < combinations.length) {
-                                    requestAnimationFrame(addBatch);
-                                } else {
-                                    $('#price-matrix-rows').append(fragment);
-                                    $('#matrix-count').text(rowIndex + ' rows');
-                                    $btn.prop('disabled', false).text('Generate All Combinations');
-                                }
-                            }
+                                });
+                            });
                             
-                            addBatch();
+                            $('#matrix-count').text(rowIndex + ' rows');
+                            $btn.prop('disabled', false).text('Generate All Combinations');
                         });
                         
                         // Per-variation toggle (additive pricing)
@@ -1238,26 +1263,19 @@ class Decor_Attribute_Pricing {
         $use_price_matrix = isset($_POST['_use_price_matrix']) ? 'yes' : 'no';
         update_post_meta($product_id, '_use_price_matrix', $use_price_matrix);
         
-        // Save price matrix data
+        // Save price matrix data (GROUP-BASED: size + group)
         if (isset($_POST['_price_matrix']) && is_array($_POST['_price_matrix'])) {
             $matrix_data = array();
             foreach ($_POST['_price_matrix'] as $row) {
-                $attributes = isset($row['attributes']) ? $row['attributes'] : array();
+                $size = isset($row['size']) ? sanitize_text_field($row['size']) : '';
+                $group = isset($row['group']) ? sanitize_text_field($row['group']) : '';
                 $price = isset($row['price']) ? $row['price'] : '';
                 
-                // Only save rows with at least one attribute selected
-                $has_selection = false;
-                $clean_attrs = array();
-                foreach ($attributes as $attr => $value) {
-                    if (!empty($value)) {
-                        $has_selection = true;
-                        $clean_attrs[sanitize_text_field($attr)] = sanitize_text_field($value);
-                    }
-                }
-                
-                if ($has_selection) {
+                // Only save rows with size and group selected
+                if (!empty($size) && !empty($group)) {
                     $matrix_data[] = array(
-                        'attributes' => $clean_attrs,
+                        'size' => $size,
+                        'group' => $group,
                         'price' => $price !== '' ? floatval($price) : '',
                     );
                 }
@@ -1368,7 +1386,8 @@ class Decor_Attribute_Pricing {
     }
     
     /**
-     * Get price from matrix for given attribute combination
+     * Get price from matrix for given attribute combination (GROUP-BASED)
+     * Looks up price by SIZE + GROUP combination
      * Returns false if no match found
      */
     public static function get_matrix_price($product_id, $selections) {
@@ -1378,66 +1397,63 @@ class Decor_Attribute_Pricing {
         
         $matrix = get_post_meta($product_id, '_price_matrix', true);
         if (!is_array($matrix) || empty($matrix)) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Matrix is empty or not array for product ' . $product_id);
-            }
             return false;
         }
         
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('Matrix data: ' . print_r($matrix, true));
-        }
+        // Find SIZE value from selections
+        $selected_size = '';
+        $selected_groups = array();
         
-        // Normalize selections - create multiple key formats for matching
-        $normalized_selections = array();
         foreach ($selections as $attr => $value) {
-            // Remove pa_ prefix and sanitize
-            $attr_clean = str_replace('pa_', '', $attr);
-            $attr_key = sanitize_title($attr_clean);
-            $value_key = sanitize_title($value);
+            if (empty($value)) continue;
             
-            // Store with multiple possible key formats
-            $normalized_selections[$attr_key] = $value_key;
-            $normalized_selections[$attr_clean] = $value_key;
-            $normalized_selections[$attr] = $value_key;
-            $normalized_selections['pa_' . $attr_key] = $value_key;
+            $attr_clean = str_replace('pa_', '', $attr);
+            $value_slug = sanitize_title($value);
+            
+            // Check if this is a SIZE attribute
+            if (stripos($attr_clean, 'size') !== false) {
+                $selected_size = $value_slug;
+            } else {
+                // For other attributes, get their group
+                $taxonomy = strpos($attr, 'pa_') === 0 ? $attr : 'pa_' . $attr;
+                $term = get_term_by('slug', $value_slug, $taxonomy);
+                if ($term) {
+                    $group = get_term_meta($term->term_id, 'attribute_group', true);
+                    if (!empty($group)) {
+                        $selected_groups[] = $group;
+                    }
+                }
+            }
         }
         
-        // Find matching row in matrix
+        if (empty($selected_size)) {
+            return false;
+        }
+        
+        // Debug logging
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Matrix lookup - Size: ' . $selected_size . ', Groups: ' . implode(', ', $selected_groups));
+        }
+        
+        // Find matching row in matrix by SIZE + GROUP
         foreach ($matrix as $row) {
             if (!isset($row['price']) || $row['price'] === '') {
                 continue;
             }
             
-            $match = true;
-            $row_attrs = isset($row['attributes']) ? $row['attributes'] : array();
+            $row_size = isset($row['size']) ? sanitize_title($row['size']) : '';
+            $row_group = isset($row['group']) ? $row['group'] : '';
             
-            if (empty($row_attrs)) {
+            // Check if size matches
+            if ($row_size !== $selected_size) {
                 continue;
             }
             
-            // Check if all row attributes match selections
-            foreach ($row_attrs as $attr => $value) {
-                $attr_key = sanitize_title(str_replace('pa_', '', $attr));
-                $value_key = sanitize_title($value);
-                
-                // Try to find match in normalized selections
-                $found = false;
-                foreach ($normalized_selections as $sel_attr => $sel_value) {
-                    $sel_attr_clean = sanitize_title(str_replace('pa_', '', $sel_attr));
-                    if ($sel_attr_clean === $attr_key && $sel_value === $value_key) {
-                        $found = true;
-                        break;
-                    }
+            // Check if any selected group matches
+            if (in_array($row_group, $selected_groups)) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('Matrix match found! Price: ' . $row['price']);
                 }
-                
-                if (!$found) {
-                    $match = false;
-                    break;
-                }
-            }
-            
-            if ($match) {
                 return floatval($row['price']);
             }
         }
