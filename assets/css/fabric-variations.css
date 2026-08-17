@@ -5,24 +5,32 @@
 
 /* ===== Sticky Product Header (Name & Price) ===== */
 .product-sticky-header {
-    display: none;
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
-    z-index: 999;
+    z-index: 9999;
     background: #fff;
-    padding: 12px 30px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 15px 30px;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.1);
     transform: translateY(-100%);
     transition: transform 0.3s ease;
+    opacity: 0;
+    visibility: hidden;
 }
 
 .product-sticky-header.is-sticky {
+    transform: translateY(0);
+    opacity: 1;
+    visibility: visible;
+}
+
+.product-sticky-header .sticky-content {
+    max-width: 1200px;
+    margin: 0 auto;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    transform: translateY(0);
 }
 
 .sticky-product-name {
@@ -40,6 +48,7 @@
 
 .sticky-product-price .woocommerce-Price-amount {
     font-size: 18px;
+    color: #c4a47c;
 }
 
 .sticky-product-price del {
@@ -50,7 +59,132 @@
 
 .sticky-product-price ins {
     text-decoration: none;
-    color: #c4a47c;
+}
+
+/* ===== Required Attributes Modal ===== */
+.decor-required-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.decor-required-modal {
+    background: #fff;
+    border-radius: 12px;
+    padding: 40px;
+    max-width: 450px;
+    width: 100%;
+    text-align: center;
+    position: relative;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.decor-required-modal .modal-close {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: none;
+    border: none;
+    font-size: 28px;
+    color: #999;
+    cursor: pointer;
+    line-height: 1;
+    padding: 5px;
+    transition: color 0.2s;
+}
+
+.decor-required-modal .modal-close:hover {
+    color: #333;
+}
+
+.decor-required-modal .modal-icon {
+    margin-bottom: 20px;
+}
+
+.decor-required-modal h3 {
+    font-size: 22px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0 0 15px 0;
+    letter-spacing: 0.5px;
+}
+
+.decor-required-modal p {
+    font-size: 14px;
+    color: #666;
+    margin: 0 0 20px 0;
+    line-height: 1.6;
+}
+
+.decor-required-modal .missing-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 25px 0;
+    text-align: left;
+    background: #f8f8f8;
+    border-radius: 8px;
+    padding: 15px 20px;
+}
+
+.decor-required-modal .missing-list li {
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+    color: #333;
+    display: flex;
+    align-items: center;
+}
+
+.decor-required-modal .missing-list li:last-child {
+    border-bottom: none;
+}
+
+.decor-required-modal .missing-list li::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    background: #c4a47c;
+    border-radius: 50%;
+    margin-right: 12px;
+    flex-shrink: 0;
+}
+
+.decor-required-modal .modal-btn {
+    background: #c4a47c;
+    color: #fff;
+    border: none;
+    padding: 14px 35px;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.decor-required-modal .modal-btn:hover {
+    background: #b39369;
 }
 
 /* ===== Required Attributes - Missing Selection Highlight ===== */
@@ -66,15 +200,15 @@
 
 /* Disabled Add to Cart Button */
 .single_add_to_cart_button.disabled {
-    opacity: 0.6 !important;
-    cursor: not-allowed !important;
-    background: #ccc !important;
-    border-color: #ccc !important;
+    opacity: 0.7 !important;
+    cursor: pointer !important;
+    background: #999 !important;
+    border-color: #999 !important;
 }
 
 .single_add_to_cart_button.disabled:hover {
-    background: #ccc !important;
-    border-color: #ccc !important;
+    background: #888 !important;
+    border-color: #888 !important;
 }
 
 /* ===== Sticky Product Gallery ===== */

@@ -488,7 +488,7 @@ console.log('Fabric Variations JS loaded');
             }
             
             let allSelected = true;
-            let missingAttrs = [];
+            this.missingAttrs = [];
             
             $attributePanels.each(function() {
                 const $panel = $(this);
@@ -500,7 +500,7 @@ console.log('Fabric Variations JS loaded');
                 
                 if (!hasSelection) {
                     allSelected = false;
-                    missingAttrs.push(attrLabel);
+                    self.missingAttrs.push(attrLabel);
                     $panel.addClass('missing-selection');
                 } else {
                     $panel.removeClass('missing-selection');
@@ -513,13 +513,13 @@ console.log('Fabric Variations JS loaded');
                 const hasSwatchSelection = $swatchesGrid.find('.swatch-item.selected').length > 0;
                 if (!hasSwatchSelection) {
                     allSelected = false;
-                    missingAttrs.push('Fabric');
+                    this.missingAttrs.push('Fabric');
                 }
             }
             
             // Update button state
             if (!allSelected) {
-                $addToCartBtn.addClass('disabled').prop('disabled', true);
+                $addToCartBtn.addClass('disabled');
                 
                 // Update button text
                 if (!$addToCartBtn.data('original-text')) {
@@ -527,7 +527,7 @@ console.log('Fabric Variations JS loaded');
                 }
                 $addToCartBtn.text('Select Options');
             } else {
-                $addToCartBtn.removeClass('disabled').prop('disabled', false);
+                $addToCartBtn.removeClass('disabled');
                 
                 // Restore original text
                 const originalText = $addToCartBtn.data('original-text');
@@ -536,7 +536,53 @@ console.log('Fabric Variations JS loaded');
                 }
             }
             
+            this.allAttributesSelected = allSelected;
             return allSelected;
+        }
+        
+        /**
+         * Show modal when trying to add to cart without all selections
+         */
+        showRequiredAttributesModal() {
+            // Remove existing modal
+            $('.decor-required-modal-overlay').remove();
+            
+            const missingList = this.missingAttrs.map(attr => `<li>${attr}</li>`).join('');
+            
+            const modalHtml = `
+                <div class="decor-required-modal-overlay">
+                    <div class="decor-required-modal">
+                        <button class="modal-close">&times;</button>
+                        <div class="modal-icon">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#c4a47c" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="8" x2="12" y2="12"></line>
+                                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                            </svg>
+                        </div>
+                        <h3>Please Complete Your Selection</h3>
+                        <p>To add this item to your cart, please select the following options:</p>
+                        <ul class="missing-list">${missingList}</ul>
+                        <button class="modal-btn">Continue Shopping</button>
+                    </div>
+                </div>
+            `;
+            
+            $('body').append(modalHtml);
+            
+            // Bind close events
+            $('.decor-required-modal-overlay').on('click', function(e) {
+                if ($(e.target).hasClass('decor-required-modal-overlay') || 
+                    $(e.target).hasClass('modal-close') || 
+                    $(e.target).hasClass('modal-btn')) {
+                    $(this).fadeOut(200, function() {
+                        $(this).remove();
+                    });
+                }
+            });
+            
+            // Show with animation
+            $('.decor-required-modal-overlay').hide().fadeIn(200);
         }
     }
     
@@ -545,8 +591,7 @@ console.log('Fabric Variations JS loaded');
      */
     class StickyProductInfo {
         constructor() {
-            this.$productInfo = $('.product-info-sticky-wrapper');
-            this.$fabricSelector = $('.decor-fabric-selector');
+            this.$fabricSelector = $('.decor-fabric-selector, .decor-attribute-selector');
             
             if (this.$fabricSelector.length) {
                 this.init();
@@ -556,23 +601,34 @@ console.log('Fabric Variations JS loaded');
         init() {
             this.createStickyWrapper();
             this.bindScroll();
+            // Initial check
+            this.updateSticky();
         }
         
         createStickyWrapper() {
-            // Find product title and price
-            const $title = $('.product_title').first();
-            const $price = $('.price').first();
+            // Find product title and price - try multiple selectors
+            const $title = $('.product_title, .entry-title, h1.title').first();
+            const $price = $('.summary .price, .product-summary .price, .woocommerce-Price-amount').first().closest('.price');
             
-            if (!$title.length) return;
+            if (!$title.length) {
+                console.log('Sticky: No title found');
+                return;
+            }
+            
+            const priceHtml = $price.length ? $price.html() : '';
             
             // Create sticky header
-            const $stickyHeader = $('<div class="product-sticky-header">' +
-                '<div class="sticky-product-name">' + $title.text() + '</div>' +
-                '<div class="sticky-product-price">' + ($price.length ? $price.html() : '') + '</div>' +
-            '</div>');
+            const $stickyHeader = $(`
+                <div class="product-sticky-header">
+                    <div class="sticky-content">
+                        <div class="sticky-product-name">${$title.text()}</div>
+                        <div class="sticky-product-price">${priceHtml}</div>
+                    </div>
+                </div>
+            `);
             
-            // Insert before fabric selector
-            this.$fabricSelector.before($stickyHeader);
+            // Insert at top of body
+            $('body').append($stickyHeader);
             this.$stickyHeader = $stickyHeader;
         }
         
@@ -622,6 +678,16 @@ console.log('Fabric Variations JS loaded');
             setTimeout(function() {
                 fabricVariations.checkRequiredAttributes();
             }, 100);
+        });
+        
+        // Intercept Add to Cart click when not all attributes selected
+        $(document).on('click', '.single_add_to_cart_button', function(e) {
+            if (!fabricVariations.allAttributesSelected && fabricVariations.missingAttrs && fabricVariations.missingAttrs.length > 0) {
+                e.preventDefault();
+                e.stopPropagation();
+                fabricVariations.showRequiredAttributesModal();
+                return false;
+            }
         });
         
         // Update sticky price when variation found
