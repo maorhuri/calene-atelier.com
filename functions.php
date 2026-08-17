@@ -751,17 +751,9 @@ function decor_add_inquire_button() {
 }
 
 /**
- * Also add Inquire button in product loop (shop page)
+ * Inquire button ONLY on single product page, NOT on archive/shop pages
+ * Removed from loop - only shows on single product page via decor_add_inquire_button()
  */
-add_action('woocommerce_after_shop_loop_item', 'decor_add_inquire_button_loop', 15);
-function decor_add_inquire_button_loop() {
-    global $product;
-    echo '<button type="button" class="button inquire-loop-btn decor-inquire-btn" 
-            data-product-name="' . esc_attr($product->get_name()) . '"
-            data-product-url="' . esc_url(get_permalink($product->get_id())) . '"
-            data-product-image="' . esc_url(wp_get_attachment_url($product->get_image_id())) . '"
-            style="font-size: 11px; padding: 8px 12px; margin-top: 5px;">Inquire</button>';
-}
 
 /**
  * Add Inquire popup form and styles
