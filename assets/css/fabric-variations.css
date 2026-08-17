@@ -1261,6 +1261,28 @@
     }
 }
 
+/* ===== Mobile: Disable sticky gallery ===== */
+@media (max-width: 991px) {
+    /* Reset any sticky/transform on gallery for mobile */
+    .woocommerce-product-gallery,
+    .product-images,
+    .product-images.wd-grid-col {
+        position: static !important;
+        transform: none !important;
+        top: auto !important;
+    }
+    
+    /* Ensure gallery scrolls normally */
+    .single-product .woocommerce-product-gallery {
+        transform: translateY(0) !important;
+    }
+    
+    /* Hide sticky price header on mobile - takes too much space */
+    .product-sticky-header {
+        display: none !important;
+    }
+}
+
 /* ===== Side Cart Styling - Elegant Design ===== */
 
 /* Hide base price next to product name */

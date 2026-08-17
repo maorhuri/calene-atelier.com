@@ -18,7 +18,7 @@ class Decor_Fabric_Variations {
     private static $instance = null;
     
     // Version for cache busting - update this on every change
-    const VERSION = '3.3.0';
+    const VERSION = '3.4.0';
     
     // Attribute slugs - these should match your WooCommerce attributes
     const FABRIC_TYPE_ATTRIBUTE = 'pa_fabric_type';
