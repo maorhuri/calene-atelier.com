@@ -191,32 +191,7 @@
             new AttributePricingCalculator();
         }
         
-        // Custom cart icon click - open Woodmart side cart
-        $(document).on('click', '.decor-cart-icon', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            // Find and click the existing header cart link to trigger Woodmart's native behavior
-            var $headerCartLink = $('.whb-header-row a[href*="cart"], .wd-tools-element a[href*="cart"], .cart-widget-opener').first();
-            
-            if ($headerCartLink.length) {
-                $headerCartLink[0].click();
-            } else {
-                // Fallback: manually open cart-widget-side
-                var $cart = $('.cart-widget-side');
-                if ($cart.hasClass('wd-opened')) {
-                    // Close if already open
-                    $cart.removeClass('wd-opened');
-                    $('body').removeClass('wd-side-hidden-opened');
-                    $('.wd-close-side').removeClass('wd-opened');
-                } else {
-                    // Open
-                    $cart.addClass('wd-opened');
-                    $('body').addClass('wd-side-hidden-opened');
-                    $('.wd-close-side').addClass('wd-opened');
-                }
-            }
-        });
+        // Cart icon handler is in functions.php - no duplicate needed here
         
         // Update cart count after add to cart
         $(document.body).on('added_to_cart wc_fragments_refreshed', function() {

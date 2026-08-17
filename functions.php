@@ -314,11 +314,20 @@ function decor_cart_icon_script() {
     </style>
     <script>
     jQuery(document).ready(function($) {
-        // Cart icon click - open side cart
-        $(document).on('click', '.decor-cart-icon', function(e) {
+        // Cart icon click - open side cart (use highest priority)
+        $('body').on('click.decorCart', '.decor-cart-icon', function(e) {
             e.preventDefault();
             e.stopPropagation();
+            e.stopImmediatePropagation();
             
+            // Try Woodmart's native method first
+            var $cartOpener = $('.cart-widget-opener, .wd-header-cart .wd-tools-inner > a').first();
+            if ($cartOpener.length && typeof $cartOpener[0].click === 'function') {
+                $cartOpener[0].click();
+                return false;
+            }
+            
+            // Fallback: manually toggle cart
             var $cart = $('.cart-widget-side');
             
             if ($cart.hasClass('wd-opened')) {
@@ -332,6 +341,8 @@ function decor_cart_icon_script() {
                 $('body').addClass('wd-side-hidden-opened');
                 $('.wd-close-side').addClass('wd-opened');
             }
+            
+            return false;
         });
         
         // Update cart count after add to cart
