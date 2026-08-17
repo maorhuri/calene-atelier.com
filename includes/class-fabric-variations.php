@@ -18,7 +18,7 @@ class Decor_Fabric_Variations {
     private static $instance = null;
     
     // Version for cache busting - update this on every change
-    const VERSION = '3.0.1';
+    const VERSION = '3.1.0';
     
     // Attribute slugs - these should match your WooCommerce attributes
     const FABRIC_TYPE_ATTRIBUTE = 'pa_fabric_type';
@@ -53,6 +53,9 @@ class Decor_Fabric_Variations {
         add_filter('woocommerce_add_cart_item_data', array($this, 'add_fabric_data_to_cart'), 10, 3);
         add_filter('woocommerce_get_item_data', array($this, 'display_fabric_data_in_cart'), 10, 2);
         add_action('woocommerce_checkout_create_order_line_item', array($this, 'add_fabric_data_to_order'), 10, 4);
+        
+        // Validate required attributes before add to cart
+        add_filter('woocommerce_add_to_cart_validation', array($this, 'validate_required_attributes'), 10, 5);
         
         // Enqueue scripts
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
@@ -863,6 +866,68 @@ class Decor_Fabric_Variations {
         if (isset($values['fabric_care']) && !empty($values['fabric_care'])) {
             $item->add_meta_data('Care', $values['fabric_care'], true);
         }
+    }
+    
+    /**
+     * Validate required attributes before adding to cart
+     * Prevents adding to cart without selecting all required attributes
+     */
+    public function validate_required_attributes($passed, $product_id, $quantity, $variation_id = 0, $variations = array()) {
+        $product = wc_get_product($product_id);
+        
+        if (!$product) {
+            return $passed;
+        }
+        
+        $attributes = $product->get_attributes();
+        
+        if (empty($attributes)) {
+            return $passed;
+        }
+        
+        $missing_attributes = array();
+        
+        foreach ($attributes as $attribute) {
+            // Skip non-visible or non-variation attributes for variable products
+            if (!$attribute->get_visible()) {
+                continue;
+            }
+            
+            $attr_name = $attribute->get_name();
+            $attr_label = wc_attribute_label($attr_name);
+            
+            // Check if this attribute is required (all visible attributes are required)
+            $attr_key = 'attribute_' . sanitize_title($attr_name);
+            
+            // For variable products, check variations array
+            if ($product->is_type('variable')) {
+                if (!isset($variations[$attr_key]) || empty($variations[$attr_key])) {
+                    // Also check POST data
+                    if (!isset($_POST[$attr_key]) || empty($_POST[$attr_key])) {
+                        $missing_attributes[] = $attr_label;
+                    }
+                }
+            } else {
+                // For simple products with attributes, check POST data
+                if (!isset($_POST[$attr_key]) || empty($_POST[$attr_key])) {
+                    // Also check if attribute value was passed via request
+                    if (!isset($_REQUEST[$attr_key]) || empty($_REQUEST[$attr_key])) {
+                        $missing_attributes[] = $attr_label;
+                    }
+                }
+            }
+        }
+        
+        if (!empty($missing_attributes)) {
+            $message = sprintf(
+                __('Please select %s before adding to cart.', 'decor'),
+                implode(', ', $missing_attributes)
+            );
+            wc_add_notice($message, 'error');
+            return false;
+        }
+        
+        return $passed;
     }
 }
 

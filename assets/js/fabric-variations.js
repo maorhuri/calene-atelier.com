@@ -473,11 +473,163 @@ console.log('Fabric Variations JS loaded');
                 }
             }
         }
+        
+        /**
+         * Check if all required attributes are selected
+         * Disables Add to Cart button if not all selected
+         */
+        checkRequiredAttributes() {
+            const self = this;
+            const $addToCartBtn = this.$form.find('.single_add_to_cart_button');
+            const $attributePanels = this.$selector.find('.attribute-panel');
+            
+            if ($attributePanels.length === 0) {
+                return true;
+            }
+            
+            let allSelected = true;
+            let missingAttrs = [];
+            
+            $attributePanels.each(function() {
+                const $panel = $(this);
+                const attrName = $panel.data('attribute');
+                const attrLabel = $panel.find('.accordion-title').text().trim();
+                
+                // Check if any option is selected in this panel
+                const hasSelection = $panel.find('.swatch-item.selected, .attribute-option.selected').length > 0;
+                
+                if (!hasSelection) {
+                    allSelected = false;
+                    missingAttrs.push(attrLabel);
+                    $panel.addClass('missing-selection');
+                } else {
+                    $panel.removeClass('missing-selection');
+                }
+            });
+            
+            // Also check swatches outside panels
+            const $swatchesGrid = this.$selector.find('.swatches-grid');
+            if ($swatchesGrid.length && $swatchesGrid.find('.swatch-item').length > 0) {
+                const hasSwatchSelection = $swatchesGrid.find('.swatch-item.selected').length > 0;
+                if (!hasSwatchSelection) {
+                    allSelected = false;
+                    missingAttrs.push('Fabric');
+                }
+            }
+            
+            // Update button state
+            if (!allSelected) {
+                $addToCartBtn.addClass('disabled').prop('disabled', true);
+                
+                // Update button text
+                if (!$addToCartBtn.data('original-text')) {
+                    $addToCartBtn.data('original-text', $addToCartBtn.text());
+                }
+                $addToCartBtn.text('Select Options');
+            } else {
+                $addToCartBtn.removeClass('disabled').prop('disabled', false);
+                
+                // Restore original text
+                const originalText = $addToCartBtn.data('original-text');
+                if (originalText) {
+                    $addToCartBtn.text(originalText);
+                }
+            }
+            
+            return allSelected;
+        }
+    }
+    
+    /**
+     * Sticky Product Info (Name & Price) when scrolling fabrics
+     */
+    class StickyProductInfo {
+        constructor() {
+            this.$productInfo = $('.product-info-sticky-wrapper');
+            this.$fabricSelector = $('.decor-fabric-selector');
+            
+            if (this.$fabricSelector.length) {
+                this.init();
+            }
+        }
+        
+        init() {
+            this.createStickyWrapper();
+            this.bindScroll();
+        }
+        
+        createStickyWrapper() {
+            // Find product title and price
+            const $title = $('.product_title').first();
+            const $price = $('.price').first();
+            
+            if (!$title.length) return;
+            
+            // Create sticky header
+            const $stickyHeader = $('<div class="product-sticky-header">' +
+                '<div class="sticky-product-name">' + $title.text() + '</div>' +
+                '<div class="sticky-product-price">' + ($price.length ? $price.html() : '') + '</div>' +
+            '</div>');
+            
+            // Insert before fabric selector
+            this.$fabricSelector.before($stickyHeader);
+            this.$stickyHeader = $stickyHeader;
+        }
+        
+        bindScroll() {
+            const self = this;
+            const $window = $(window);
+            
+            $window.on('scroll', function() {
+                self.updateSticky();
+            });
+        }
+        
+        updateSticky() {
+            if (!this.$stickyHeader) return;
+            
+            const selectorTop = this.$fabricSelector.offset().top;
+            const scrollTop = $(window).scrollTop();
+            const headerHeight = 80; // Approximate header height
+            
+            if (scrollTop > selectorTop - headerHeight - 60) {
+                this.$stickyHeader.addClass('is-sticky');
+            } else {
+                this.$stickyHeader.removeClass('is-sticky');
+            }
+        }
+        
+        // Update price when variation changes
+        updatePrice(priceHtml) {
+            if (this.$stickyHeader) {
+                this.$stickyHeader.find('.sticky-product-price').html(priceHtml);
+            }
+        }
     }
 
     // Initialize
     $(document).ready(function() {
-        new FabricVariations();
+        const fabricVariations = new FabricVariations();
+        const stickyInfo = new StickyProductInfo();
+        
+        // Check required attributes on init and after any selection
+        setTimeout(function() {
+            fabricVariations.checkRequiredAttributes();
+        }, 500);
+        
+        // Re-check when attributes change
+        $(document).on('click', '.swatch-item, .attribute-option', function() {
+            setTimeout(function() {
+                fabricVariations.checkRequiredAttributes();
+            }, 100);
+        });
+        
+        // Update sticky price when variation found
+        $('form.variations_form').on('found_variation', function(e, variation) {
+            if (variation.price_html) {
+                stickyInfo.updatePrice(variation.price_html);
+            }
+        });
     });
 
 })(jQuery);
