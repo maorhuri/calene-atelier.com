@@ -437,7 +437,7 @@ function decor_logged_in_user_styles() {
 
 /**
  * 7. Separate Billing and Shipping addresses in checkout
- * Uncheck "Ship to different address" by default for B2B
+ * Ship to different address checked by default for B2B
  */
 add_filter('woocommerce_ship_to_different_address_checked', '__return_true');
 
@@ -449,6 +449,58 @@ function decor_shipping_note() {
     echo '<div class="shipping-note" style="background: #f8f5f0; padding: 15px; margin-bottom: 20px; border-left: 3px solid #c4a47c;">';
     echo '<strong>Note for Trade Members:</strong> Enter your client\'s shipping address below. Billing will be processed to your account.';
     echo '</div>';
+}
+
+/**
+ * Add styling to make billing/shipping separation clearer
+ */
+add_action('wp_head', 'decor_checkout_styles');
+function decor_checkout_styles() {
+    if (!is_checkout()) return;
+    ?>
+    <style>
+        /* Clear separation between billing and shipping */
+        .woocommerce-billing-fields,
+        .woocommerce-shipping-fields {
+            background: #fff;
+            padding: 30px;
+            border: 1px solid #eee;
+            margin-bottom: 30px;
+        }
+        
+        .woocommerce-billing-fields h3,
+        .woocommerce-shipping-fields h3,
+        #ship-to-different-address {
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #c4a47c;
+        }
+        
+        /* Highlight shipping section */
+        .woocommerce-shipping-fields {
+            background: #faf9f7;
+            border-color: #c4a47c;
+        }
+        
+        #ship-to-different-address label {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        /* Add icons */
+        .woocommerce-billing-fields h3::before {
+            content: '💳 ';
+        }
+        
+        #ship-to-different-address label::before {
+            content: '📦 ';
+        }
+    </style>
+    <?php
 }
 
 /**
