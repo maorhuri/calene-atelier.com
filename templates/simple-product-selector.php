@@ -359,5 +359,106 @@ jQuery(document).ready(function($) {
         // Show clear button
         $panel.find('.clear-selection-btn').show();
     });
+    
+    // ===== Required Attributes Validation =====
+    
+    // Get all unique groups that need selection
+    function getRequiredGroups() {
+        var groups = {};
+        $selector.find('.attribute-panel[data-group]').each(function() {
+            var group = $(this).data('group');
+            if (group && group !== '') {
+                groups[group] = $(this).find('.accordion-title').first().text().trim().split(' ')[0]; // Get first word like "GRADE"
+            }
+        });
+        return groups;
+    }
+    
+    // Check if all required groups have a selection
+    function checkRequiredSelections() {
+        var groups = getRequiredGroups();
+        var missingGroups = [];
+        
+        for (var group in groups) {
+            var hasSelection = false;
+            $selector.find('.attribute-panel[data-group="' + group + '"]').each(function() {
+                if ($(this).find('.swatch-item.selected, .attribute-option.selected').length > 0) {
+                    hasSelection = true;
+                    return false; // break
+                }
+            });
+            
+            if (!hasSelection) {
+                missingGroups.push(groups[group] || group);
+            }
+        }
+        
+        // Also check panels without groups (independent attributes like SIZE)
+        $selector.find('.attribute-panel:not([data-group]), .attribute-panel[data-group=""]').each(function() {
+            var $panel = $(this);
+            var label = $panel.find('.accordion-title').text().trim();
+            var hasSelection = $panel.find('.swatch-item.selected, .attribute-option.selected').length > 0;
+            
+            if (!hasSelection && label) {
+                missingGroups.push(label);
+            }
+        });
+        
+        return missingGroups;
+    }
+    
+    // Show modal for missing selections
+    function showRequiredModal(missingGroups) {
+        // Remove existing modal
+        $('.decor-required-modal-overlay').remove();
+        
+        var missingList = missingGroups.map(function(g) { return '<li>' + g + '</li>'; }).join('');
+        
+        var modalHtml = '<div class="decor-required-modal-overlay">' +
+            '<div class="decor-required-modal">' +
+                '<button class="modal-close">&times;</button>' +
+                '<div class="modal-icon">' +
+                    '<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#c4a47c" stroke-width="2">' +
+                        '<circle cx="12" cy="12" r="10"></circle>' +
+                        '<line x1="12" y1="8" x2="12" y2="12"></line>' +
+                        '<line x1="12" y1="16" x2="12.01" y2="16"></line>' +
+                    '</svg>' +
+                '</div>' +
+                '<h3>Please Complete Your Selection</h3>' +
+                '<p>To add this item to your cart, please select one option from each of the following:</p>' +
+                '<ul class="missing-list">' + missingList + '</ul>' +
+                '<button class="modal-btn">Continue Shopping</button>' +
+            '</div>' +
+        '</div>';
+        
+        $('body').append(modalHtml);
+        
+        // Bind close events
+        $('.decor-required-modal-overlay').on('click', function(e) {
+            if ($(e.target).hasClass('decor-required-modal-overlay') || 
+                $(e.target).hasClass('modal-close') || 
+                $(e.target).hasClass('modal-btn')) {
+                $(this).fadeOut(200, function() {
+                    $(this).remove();
+                });
+            }
+        });
+        
+        // Show with animation
+        $('.decor-required-modal-overlay').hide().fadeIn(200);
+    }
+    
+    // Intercept Add to Cart button click
+    $(document).on('click', '.single_add_to_cart_button', function(e) {
+        var missingGroups = checkRequiredSelections();
+        
+        if (missingGroups.length > 0) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            showRequiredModal(missingGroups);
+            return false;
+        }
+    });
 });
 </script>

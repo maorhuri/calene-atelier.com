@@ -164,12 +164,17 @@
         handleSubmit(e) {
             e.preventDefault();
             
+            console.log('Form submit triggered');
+            
             // Validate required fields
             if (!this.validateForm()) {
+                console.log('Form validation failed');
                 return;
             }
             
-            // Get signature data
+            console.log('Form validation passed');
+            
+            // Get signature data (optional - don't block if no signature)
             if (this.signaturePad && !this.signaturePad.isEmpty()) {
                 $('#signature-data').val(this.signaturePad.toDataURL());
             }
@@ -180,7 +185,10 @@
             
             // Show loading state
             this.$form.addClass('loading');
+            this.$form.find('.trade-submit-btn').prop('disabled', true).text('Submitting...');
             this.$messages.removeClass('success error').hide();
+            
+            console.log('Submitting to:', decorB2B.ajaxUrl);
             
             // Submit via AJAX
             $.ajax({
@@ -190,37 +198,24 @@
                 processData: false,
                 contentType: false,
                 success: (response) => {
+                    console.log('AJAX response:', response);
                     this.$form.removeClass('loading');
+                    this.$form.find('.trade-submit-btn').prop('disabled', false).text('Submit Trade Application');
                     
                     if (response.success) {
-                        this.$messages
-                            .removeClass('error')
-                            .addClass('success')
-                            .html(response.data.message)
-                            .show();
-                        
-                        // Scroll to message
-                        $('html, body').animate({
-                            scrollTop: this.$messages.offset().top - 100
-                        }, 500);
+                        // Show beautiful Thank You modal
+                        this.showThankYouModal();
                         
                         // Reset form
                         this.$form[0].reset();
                         if (this.signaturePad) {
                             this.signaturePad.clear();
                         }
-                        
-                        // Redirect after delay
-                        if (response.data.redirect) {
-                            setTimeout(() => {
-                                // window.location.href = response.data.redirect;
-                            }, 3000);
-                        }
                     } else {
                         this.$messages
                             .removeClass('success')
                             .addClass('error')
-                            .html(response.data.message)
+                            .html(response.data.message || 'An error occurred.')
                             .show();
                         
                         $('html, body').animate({
@@ -229,7 +224,9 @@
                     }
                 },
                 error: (xhr, status, error) => {
+                    console.log('AJAX error:', status, error);
                     this.$form.removeClass('loading');
+                    this.$form.find('.trade-submit-btn').prop('disabled', false).text('Submit Trade Application');
                     this.$messages
                         .removeClass('success')
                         .addClass('error')
@@ -237,6 +234,147 @@
                         .show();
                 }
             });
+        }
+        
+        showThankYouModal() {
+            // Remove existing modal
+            $('.trade-thank-you-modal').remove();
+            
+            const modalHtml = `
+                <div class="trade-thank-you-modal">
+                    <div class="thank-you-content">
+                        <button class="modal-close">&times;</button>
+                        <div class="thank-you-icon">
+                            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#c4a47c" stroke-width="2">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                            </svg>
+                        </div>
+                        <h2>THANK YOU FOR APPLYING</h2>
+                        <p>Your Trade Access application has been received.</p>
+                        <p>We'll review your details and be in touch once your account is approved.</p>
+                        <a href="/shop/" class="explore-btn">EXPLORE THE COLLECTION</a>
+                    </div>
+                </div>
+            `;
+            
+            $('body').append(modalHtml);
+            
+            // Add styles if not already added
+            if (!$('#trade-thank-you-styles').length) {
+                const styles = `
+                    <style id="trade-thank-you-styles">
+                        .trade-thank-you-modal {
+                            position: fixed;
+                            top: 0;
+                            left: 0;
+                            right: 0;
+                            bottom: 0;
+                            background: rgba(0, 0, 0, 0.7);
+                            z-index: 999999;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            padding: 20px;
+                            animation: fadeIn 0.3s ease;
+                        }
+                        
+                        @keyframes fadeIn {
+                            from { opacity: 0; }
+                            to { opacity: 1; }
+                        }
+                        
+                        .trade-thank-you-modal .thank-you-content {
+                            background: #fff;
+                            padding: 60px 50px;
+                            max-width: 500px;
+                            width: 100%;
+                            text-align: center;
+                            position: relative;
+                            border-radius: 4px;
+                            animation: slideUp 0.4s ease;
+                        }
+                        
+                        @keyframes slideUp {
+                            from { 
+                                opacity: 0;
+                                transform: translateY(30px);
+                            }
+                            to { 
+                                opacity: 1;
+                                transform: translateY(0);
+                            }
+                        }
+                        
+                        .trade-thank-you-modal .modal-close {
+                            position: absolute;
+                            top: 15px;
+                            right: 20px;
+                            background: none;
+                            border: none;
+                            font-size: 30px;
+                            color: #999;
+                            cursor: pointer;
+                            line-height: 1;
+                        }
+                        
+                        .trade-thank-you-modal .modal-close:hover {
+                            color: #333;
+                        }
+                        
+                        .trade-thank-you-modal .thank-you-icon {
+                            margin-bottom: 25px;
+                        }
+                        
+                        .trade-thank-you-modal h2 {
+                            font-size: 24px;
+                            font-weight: 600;
+                            letter-spacing: 3px;
+                            color: #1a1a1a;
+                            margin: 0 0 20px 0;
+                        }
+                        
+                        .trade-thank-you-modal p {
+                            font-size: 15px;
+                            color: #666;
+                            line-height: 1.7;
+                            margin: 0 0 10px 0;
+                        }
+                        
+                        .trade-thank-you-modal .explore-btn {
+                            display: inline-block;
+                            margin-top: 30px;
+                            padding: 15px 40px;
+                            background: #c4a47c;
+                            color: #fff;
+                            text-decoration: none;
+                            font-size: 13px;
+                            font-weight: 600;
+                            letter-spacing: 2px;
+                            transition: background 0.2s;
+                        }
+                        
+                        .trade-thank-you-modal .explore-btn:hover {
+                            background: #b39369;
+                            color: #fff;
+                        }
+                    </style>
+                `;
+                $('head').append(styles);
+            }
+            
+            // Close modal on click
+            $('.trade-thank-you-modal').on('click', function(e) {
+                if ($(e.target).hasClass('trade-thank-you-modal') || 
+                    $(e.target).hasClass('modal-close')) {
+                    $(this).fadeOut(200, function() {
+                        $(this).remove();
+                    });
+                }
+            });
+            
+            // Show modal
+            $('.trade-thank-you-modal').hide().fadeIn(300);
         }
         
         validateForm() {

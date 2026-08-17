@@ -18,7 +18,7 @@ class Decor_Fabric_Variations {
     private static $instance = null;
     
     // Version for cache busting - update this on every change
-    const VERSION = '3.2.0';
+    const VERSION = '3.3.0';
     
     // Attribute slugs - these should match your WooCommerce attributes
     const FABRIC_TYPE_ATTRIBUTE = 'pa_fabric_type';
@@ -55,7 +55,8 @@ class Decor_Fabric_Variations {
         add_action('woocommerce_checkout_create_order_line_item', array($this, 'add_fabric_data_to_order'), 10, 4);
         
         // Validate required attributes before add to cart
-        add_filter('woocommerce_add_to_cart_validation', array($this, 'validate_required_attributes'), 10, 5);
+        // DISABLED - using JavaScript popup instead for better UX
+        // add_filter('woocommerce_add_to_cart_validation', array($this, 'validate_required_attributes'), 10, 5);
         
         // Enqueue scripts
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));

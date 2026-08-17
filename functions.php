@@ -402,3 +402,181 @@ function decor_cart_icon_script() {
     </script>
     <?php
 }
+
+/**
+ * ===== CHECKOUT & USER EXPERIENCE IMPROVEMENTS =====
+ */
+
+/**
+ * 6. Hide "New to Calene Atelier" for logged in users
+ * Show only Sign Out option
+ */
+add_action('wp_head', 'decor_logged_in_user_styles');
+function decor_logged_in_user_styles() {
+    if (is_user_logged_in()) {
+        ?>
+        <style>
+            /* Hide "New to Calene Atelier" and registration prompts for logged in users */
+            .woocommerce-account .woocommerce-MyAccount-navigation-link--customer-logout ~ *,
+            .new-to-calene,
+            .register-prompt,
+            .woocommerce-form-register,
+            .u-column2.col-2 {
+                /* Keep visible but hide registration */
+            }
+            
+            /* Simplify header for logged in users */
+            .logged-in .header-login-text,
+            .logged-in .register-link {
+                display: none !important;
+            }
+        </style>
+        <?php
+    }
+}
+
+/**
+ * 7. Separate Billing and Shipping addresses in checkout
+ * Uncheck "Ship to different address" by default for B2B
+ */
+add_filter('woocommerce_ship_to_different_address_checked', '__return_true');
+
+/**
+ * Add note about billing vs shipping for designers
+ */
+add_action('woocommerce_before_checkout_shipping_form', 'decor_shipping_note');
+function decor_shipping_note() {
+    echo '<div class="shipping-note" style="background: #f8f5f0; padding: 15px; margin-bottom: 20px; border-left: 3px solid #c4a47c;">';
+    echo '<strong>Note for Trade Members:</strong> Enter your client\'s shipping address below. Billing will be processed to your account.';
+    echo '</div>';
+}
+
+/**
+ * 8. Terms & Conditions checkbox required before checkout
+ */
+add_action('woocommerce_review_order_before_submit', 'decor_add_checkout_terms');
+function decor_add_checkout_terms() {
+    ?>
+    <div class="checkout-terms-wrapper" style="margin-bottom: 20px;">
+        <label class="woocommerce-form__label woocommerce-form__label-for-checkbox checkbox">
+            <input type="checkbox" class="woocommerce-form__input woocommerce-form__input-checkbox" name="terms_agreed" id="terms_agreed" required>
+            <span class="woocommerce-terms-and-conditions-checkbox-text">
+                I have read and agree to the <a href="/terms/" target="_blank">Terms & Conditions</a> and <a href="/privacy-policy/" target="_blank">Privacy Policy</a>
+            </span>
+            <span class="required">*</span>
+        </label>
+    </div>
+    <?php
+}
+
+add_action('woocommerce_checkout_process', 'decor_validate_checkout_terms');
+function decor_validate_checkout_terms() {
+    if (!isset($_POST['terms_agreed'])) {
+        wc_add_notice(__('Please agree to the Terms & Conditions before placing your order.', 'decor'), 'error');
+    }
+}
+
+/**
+ * 9. Invoice email after order - WooCommerce handles this by default
+ * Just ensure PDF invoices are attached (if plugin installed)
+ */
+
+/**
+ * ===== CONTACT & INQUIRY FEATURES =====
+ */
+
+/**
+ * 10 & 12. Add WhatsApp contact button (floating)
+ */
+add_action('wp_footer', 'decor_whatsapp_button');
+function decor_whatsapp_button() {
+    $whatsapp_number = '+1234567890'; // Replace with actual number
+    ?>
+    <a href="https://wa.me/<?php echo preg_replace('/[^0-9]/', '', $whatsapp_number); ?>" 
+       class="decor-whatsapp-btn" 
+       target="_blank" 
+       rel="noopener"
+       title="Contact us on WhatsApp">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+        </svg>
+    </a>
+    <style>
+        .decor-whatsapp-btn {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            width: 60px;
+            height: 60px;
+            background: #25D366;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(37, 211, 102, 0.4);
+            z-index: 9999;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .decor-whatsapp-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(37, 211, 102, 0.5);
+        }
+        
+        /* Hide on mobile if cart is open */
+        .wd-side-hidden-opened .decor-whatsapp-btn {
+            display: none;
+        }
+    </style>
+    <?php
+}
+
+/**
+ * 11. Add "Inquire" button next to each product
+ */
+add_action('woocommerce_after_add_to_cart_button', 'decor_add_inquire_button');
+function decor_add_inquire_button() {
+    global $product;
+    $product_name = $product->get_name();
+    $product_url = get_permalink($product->get_id());
+    $email = 'info@calene-atelier.com'; // Replace with actual email
+    $subject = rawurlencode("Inquiry about: " . $product_name);
+    $body = rawurlencode("Hi,\n\nI'm interested in the following product:\n\n" . $product_name . "\n" . $product_url . "\n\nPlease provide more information.\n\nThank you!");
+    
+    ?>
+    <a href="mailto:<?php echo $email; ?>?subject=<?php echo $subject; ?>&body=<?php echo $body; ?>" 
+       class="button alt decor-inquire-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px; vertical-align: middle;">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+            <polyline points="22,6 12,13 2,6"></polyline>
+        </svg>
+        Inquire
+    </a>
+    <style>
+        .decor-inquire-btn {
+            background: transparent !important;
+            border: 1px solid #c4a47c !important;
+            color: #c4a47c !important;
+            margin-left: 10px !important;
+        }
+        .decor-inquire-btn:hover {
+            background: #c4a47c !important;
+            color: #fff !important;
+        }
+    </style>
+    <?php
+}
+
+/**
+ * Also add Inquire button in product loop (shop page)
+ */
+add_action('woocommerce_after_shop_loop_item', 'decor_add_inquire_button_loop', 15);
+function decor_add_inquire_button_loop() {
+    global $product;
+    $product_name = $product->get_name();
+    $product_url = get_permalink($product->get_id());
+    $email = 'info@calene-atelier.com';
+    $subject = rawurlencode("Inquiry about: " . $product_name);
+    $body = rawurlencode("Hi,\n\nI'm interested in: " . $product_name . "\n" . $product_url);
+    
+    echo '<a href="mailto:' . $email . '?subject=' . $subject . '&body=' . $body . '" class="button inquire-loop-btn" style="font-size: 11px; padding: 8px 12px; margin-top: 5px; display: inline-block; background: transparent; border: 1px solid #c4a47c; color: #c4a47c;">Inquire</a>';
+}

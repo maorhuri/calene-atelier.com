@@ -15,7 +15,7 @@ class Decor_WC_B2B {
     
     private static $instance = null;
     
-    const VERSION = '1.2.4';
+    const VERSION = '1.3.0';
     const DEALER_ROLE = 'dealer';
     
     public static function get_instance() {
