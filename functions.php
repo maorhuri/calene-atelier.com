@@ -531,38 +531,22 @@ function decor_whatsapp_button() {
 }
 
 /**
- * 11. Add "Inquire" button next to each product
+ * 11. Add "Inquire" button next to each product - Opens popup form
  */
 add_action('woocommerce_after_add_to_cart_button', 'decor_add_inquire_button');
 function decor_add_inquire_button() {
     global $product;
-    $product_name = $product->get_name();
-    $product_url = get_permalink($product->get_id());
-    $email = 'info@calene-atelier.com'; // Replace with actual email
-    $subject = rawurlencode("Inquiry about: " . $product_name);
-    $body = rawurlencode("Hi,\n\nI'm interested in the following product:\n\n" . $product_name . "\n" . $product_url . "\n\nPlease provide more information.\n\nThank you!");
-    
     ?>
-    <a href="mailto:<?php echo $email; ?>?subject=<?php echo $subject; ?>&body=<?php echo $body; ?>" 
-       class="button alt decor-inquire-btn">
+    <button type="button" class="button alt decor-inquire-btn" 
+            data-product-name="<?php echo esc_attr($product->get_name()); ?>"
+            data-product-url="<?php echo esc_url(get_permalink($product->get_id())); ?>"
+            data-product-image="<?php echo esc_url(wp_get_attachment_url($product->get_image_id())); ?>">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px; vertical-align: middle;">
             <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
             <polyline points="22,6 12,13 2,6"></polyline>
         </svg>
         Inquire
-    </a>
-    <style>
-        .decor-inquire-btn {
-            background: transparent !important;
-            border: 1px solid #c4a47c !important;
-            color: #c4a47c !important;
-            margin-left: 10px !important;
-        }
-        .decor-inquire-btn:hover {
-            background: #c4a47c !important;
-            color: #fff !important;
-        }
-    </style>
+    </button>
     <?php
 }
 
@@ -572,11 +556,381 @@ function decor_add_inquire_button() {
 add_action('woocommerce_after_shop_loop_item', 'decor_add_inquire_button_loop', 15);
 function decor_add_inquire_button_loop() {
     global $product;
-    $product_name = $product->get_name();
-    $product_url = get_permalink($product->get_id());
-    $email = 'info@calene-atelier.com';
-    $subject = rawurlencode("Inquiry about: " . $product_name);
-    $body = rawurlencode("Hi,\n\nI'm interested in: " . $product_name . "\n" . $product_url);
+    echo '<button type="button" class="button inquire-loop-btn decor-inquire-btn" 
+            data-product-name="' . esc_attr($product->get_name()) . '"
+            data-product-url="' . esc_url(get_permalink($product->get_id())) . '"
+            data-product-image="' . esc_url(wp_get_attachment_url($product->get_image_id())) . '"
+            style="font-size: 11px; padding: 8px 12px; margin-top: 5px;">Inquire</button>';
+}
+
+/**
+ * Add Inquire popup form and styles
+ */
+add_action('wp_footer', 'decor_inquire_popup');
+function decor_inquire_popup() {
+    ?>
+    <!-- Inquire Popup -->
+    <div class="inquire-popup-overlay" style="display: none;">
+        <div class="inquire-popup">
+            <button class="inquire-close">&times;</button>
+            
+            <div class="inquire-product-info">
+                <img src="" alt="" class="inquire-product-image">
+                <div class="inquire-product-details">
+                    <h3 class="inquire-product-name"></h3>
+                    <a href="#" class="inquire-product-link" target="_blank">View Product</a>
+                </div>
+            </div>
+            
+            <h2>Inquire About This Product</h2>
+            <p>Have questions? We'd love to help. Fill out the form below and we'll get back to you shortly.</p>
+            
+            <form class="inquire-form" id="inquire-form">
+                <input type="hidden" name="product_name" class="inquire-hidden-product">
+                <input type="hidden" name="product_url" class="inquire-hidden-url">
+                <input type="hidden" name="action" value="submit_product_inquiry">
+                <?php wp_nonce_field('product_inquiry', 'inquiry_nonce'); ?>
+                
+                <div class="inquire-form-row">
+                    <div class="inquire-form-group">
+                        <label for="inquire_name">Your Name <span>*</span></label>
+                        <input type="text" name="name" id="inquire_name" required>
+                    </div>
+                </div>
+                
+                <div class="inquire-form-row">
+                    <div class="inquire-form-group">
+                        <label for="inquire_email">Email Address <span>*</span></label>
+                        <input type="email" name="email" id="inquire_email" required>
+                    </div>
+                </div>
+                
+                <div class="inquire-form-row">
+                    <div class="inquire-form-group">
+                        <label for="inquire_phone">Phone Number</label>
+                        <input type="tel" name="phone" id="inquire_phone">
+                    </div>
+                </div>
+                
+                <div class="inquire-form-row">
+                    <div class="inquire-form-group">
+                        <label for="inquire_message">Your Message <span>*</span></label>
+                        <textarea name="message" id="inquire_message" rows="4" required placeholder="Tell us what you'd like to know about this product..."></textarea>
+                    </div>
+                </div>
+                
+                <button type="submit" class="inquire-submit-btn">Send Inquiry</button>
+                <div class="inquire-form-message"></div>
+            </form>
+        </div>
+    </div>
     
-    echo '<a href="mailto:' . $email . '?subject=' . $subject . '&body=' . $body . '" class="button inquire-loop-btn" style="font-size: 11px; padding: 8px 12px; margin-top: 5px; display: inline-block; background: transparent; border: 1px solid #c4a47c; color: #c4a47c;">Inquire</a>';
+    <style>
+        /* Inquire Button */
+        .decor-inquire-btn {
+            background: transparent !important;
+            border: 1px solid #c4a47c !important;
+            color: #c4a47c !important;
+            margin-left: 10px !important;
+            cursor: pointer;
+        }
+        .decor-inquire-btn:hover {
+            background: #c4a47c !important;
+            color: #fff !important;
+        }
+        
+        /* Inquire Popup Overlay */
+        .inquire-popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 999999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        /* Inquire Popup */
+        .inquire-popup {
+            background: #fff;
+            max-width: 500px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 40px;
+            position: relative;
+            border-radius: 4px;
+            animation: slideUp 0.3s ease;
+        }
+        
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .inquire-close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 28px;
+            color: #999;
+            cursor: pointer;
+            line-height: 1;
+        }
+        .inquire-close:hover { color: #333; }
+        
+        /* Product Info */
+        .inquire-product-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .inquire-product-image {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+        
+        .inquire-product-name {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 0 0 5px 0;
+            color: #1a1a1a;
+        }
+        
+        .inquire-product-link {
+            font-size: 12px;
+            color: #c4a47c;
+        }
+        
+        /* Form */
+        .inquire-popup h2 {
+            font-size: 20px;
+            font-weight: 600;
+            margin: 0 0 10px 0;
+            color: #1a1a1a;
+        }
+        
+        .inquire-popup > p {
+            font-size: 14px;
+            color: #666;
+            margin: 0 0 25px 0;
+        }
+        
+        .inquire-form-row {
+            margin-bottom: 15px;
+        }
+        
+        .inquire-form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 5px;
+            color: #333;
+        }
+        
+        .inquire-form-group label span {
+            color: #c4a47c;
+        }
+        
+        .inquire-form-group input,
+        .inquire-form-group textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+        
+        .inquire-form-group input:focus,
+        .inquire-form-group textarea:focus {
+            outline: none;
+            border-color: #c4a47c;
+        }
+        
+        .inquire-submit-btn {
+            width: 100%;
+            padding: 15px;
+            background: #c4a47c;
+            color: #fff;
+            border: none;
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 10px;
+        }
+        
+        .inquire-submit-btn:hover {
+            background: #b39369;
+        }
+        
+        .inquire-submit-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .inquire-form-message {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 4px;
+            text-align: center;
+            display: none;
+        }
+        
+        .inquire-form-message.success {
+            display: block;
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .inquire-form-message.error {
+            display: block;
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+    
+    <script>
+    jQuery(document).ready(function($) {
+        // Open popup
+        $(document).on('click', '.decor-inquire-btn', function(e) {
+            e.preventDefault();
+            
+            var productName = $(this).data('product-name');
+            var productUrl = $(this).data('product-url');
+            var productImage = $(this).data('product-image');
+            
+            // Fill popup with product info
+            $('.inquire-product-name').text(productName);
+            $('.inquire-product-link').attr('href', productUrl);
+            $('.inquire-product-image').attr('src', productImage);
+            $('.inquire-hidden-product').val(productName);
+            $('.inquire-hidden-url').val(productUrl);
+            
+            // Show popup
+            $('.inquire-popup-overlay').fadeIn(200);
+            $('body').css('overflow', 'hidden');
+        });
+        
+        // Close popup
+        $(document).on('click', '.inquire-close, .inquire-popup-overlay', function(e) {
+            if (e.target === this) {
+                $('.inquire-popup-overlay').fadeOut(200);
+                $('body').css('overflow', '');
+            }
+        });
+        
+        // Submit form
+        $('#inquire-form').on('submit', function(e) {
+            e.preventDefault();
+            
+            var $form = $(this);
+            var $btn = $form.find('.inquire-submit-btn');
+            var $msg = $form.find('.inquire-form-message');
+            
+            $btn.prop('disabled', true).text('Sending...');
+            $msg.removeClass('success error').hide();
+            
+            $.ajax({
+                url: '<?php echo admin_url('admin-ajax.php'); ?>',
+                type: 'POST',
+                data: $form.serialize(),
+                success: function(response) {
+                    $btn.prop('disabled', false).text('Send Inquiry');
+                    
+                    if (response.success) {
+                        $msg.addClass('success').text('Thank you! Your inquiry has been sent. We\'ll get back to you soon.').show();
+                        $form[0].reset();
+                        
+                        // Close popup after 3 seconds
+                        setTimeout(function() {
+                            $('.inquire-popup-overlay').fadeOut(200);
+                            $('body').css('overflow', '');
+                            $msg.hide();
+                        }, 3000);
+                    } else {
+                        $msg.addClass('error').text(response.data || 'An error occurred. Please try again.').show();
+                    }
+                },
+                error: function() {
+                    $btn.prop('disabled', false).text('Send Inquiry');
+                    $msg.addClass('error').text('An error occurred. Please try again.').show();
+                }
+            });
+        });
+    });
+    </script>
+    <?php
+}
+
+/**
+ * Handle inquiry form submission
+ */
+add_action('wp_ajax_submit_product_inquiry', 'decor_handle_product_inquiry');
+add_action('wp_ajax_nopriv_submit_product_inquiry', 'decor_handle_product_inquiry');
+function decor_handle_product_inquiry() {
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['inquiry_nonce'], 'product_inquiry')) {
+        wp_send_json_error('Security check failed.');
+    }
+    
+    // Get form data
+    $name = sanitize_text_field($_POST['name']);
+    $email = sanitize_email($_POST['email']);
+    $phone = sanitize_text_field($_POST['phone']);
+    $message = sanitize_textarea_field($_POST['message']);
+    $product_name = sanitize_text_field($_POST['product_name']);
+    $product_url = esc_url($_POST['product_url']);
+    
+    // Validate required fields
+    if (empty($name) || empty($email) || empty($message)) {
+        wp_send_json_error('Please fill in all required fields.');
+    }
+    
+    if (!is_email($email)) {
+        wp_send_json_error('Please enter a valid email address.');
+    }
+    
+    // Prepare email
+    $to = 'info@calene-atelier.com'; // Change to actual email
+    $subject = 'Product Inquiry: ' . $product_name;
+    
+    $body = "New product inquiry received:\n\n";
+    $body .= "Product: " . $product_name . "\n";
+    $body .= "Product URL: " . $product_url . "\n\n";
+    $body .= "From: " . $name . "\n";
+    $body .= "Email: " . $email . "\n";
+    if ($phone) {
+        $body .= "Phone: " . $phone . "\n";
+    }
+    $body .= "\nMessage:\n" . $message . "\n";
+    
+    $headers = array(
+        'Content-Type: text/plain; charset=UTF-8',
+        'Reply-To: ' . $name . ' <' . $email . '>'
+    );
+    
+    // Send email
+    $sent = wp_mail($to, $subject, $body, $headers);
+    
+    if ($sent) {
+        wp_send_json_success('Inquiry sent successfully.');
+    } else {
+        wp_send_json_error('Failed to send inquiry. Please try again.');
+    }
 }
