@@ -441,11 +441,98 @@ function decor_logged_in_user_styles() {
  * Shipping is CLOSED by default, checkbox to open
  */
 
-// Keep WooCommerce default behavior - shipping closed by default
+// Force cart to need shipping address
+add_filter('woocommerce_cart_needs_shipping_address', '__return_true');
+
+// Shipping checkbox unchecked by default
 add_filter('woocommerce_ship_to_different_address_checked', '__return_false');
 
 /**
- * Add styling for checkout shipping toggle
+ * Add custom shipping section after billing
+ */
+add_action('woocommerce_after_checkout_billing_form', 'decor_add_shipping_section');
+function decor_add_shipping_section() {
+    ?>
+    <div class="decor-shipping-section">
+        <div class="shipping-toggle">
+            <label>
+                <input type="checkbox" id="decor-ship-different" name="ship_to_different_address" value="1">
+                <span>📦 Ship to a different address?</span>
+            </label>
+            <p class="toggle-note">Check this if you want to ship to your client's address instead of your billing address.</p>
+        </div>
+        
+        <div class="decor-shipping-fields" style="display: none;">
+            <div class="shipping-note">
+                <strong>Client's Delivery Address</strong><br>
+                Enter the address where this order should be shipped.
+            </div>
+            
+            <p class="form-row form-row-first">
+                <label for="shipping_first_name">First name <span class="required">*</span></label>
+                <input type="text" class="input-text" name="shipping_first_name" id="shipping_first_name" value="">
+            </p>
+            
+            <p class="form-row form-row-last">
+                <label for="shipping_last_name">Last name <span class="required">*</span></label>
+                <input type="text" class="input-text" name="shipping_last_name" id="shipping_last_name" value="">
+            </p>
+            
+            <p class="form-row form-row-wide">
+                <label for="shipping_company">Company name (optional)</label>
+                <input type="text" class="input-text" name="shipping_company" id="shipping_company" value="">
+            </p>
+            
+            <p class="form-row form-row-wide">
+                <label for="shipping_address_1">Street address <span class="required">*</span></label>
+                <input type="text" class="input-text" name="shipping_address_1" id="shipping_address_1" placeholder="House number and street name" value="">
+            </p>
+            
+            <p class="form-row form-row-wide">
+                <input type="text" class="input-text" name="shipping_address_2" id="shipping_address_2" placeholder="Apartment, suite, unit, etc. (optional)" value="">
+            </p>
+            
+            <p class="form-row form-row-wide">
+                <label for="shipping_city">Town / City <span class="required">*</span></label>
+                <input type="text" class="input-text" name="shipping_city" id="shipping_city" value="">
+            </p>
+            
+            <p class="form-row form-row-wide">
+                <label for="shipping_state">State <span class="required">*</span></label>
+                <input type="text" class="input-text" name="shipping_state" id="shipping_state" value="">
+            </p>
+            
+            <p class="form-row form-row-wide">
+                <label for="shipping_postcode">ZIP Code <span class="required">*</span></label>
+                <input type="text" class="input-text" name="shipping_postcode" id="shipping_postcode" value="">
+            </p>
+        </div>
+    </div>
+    
+    <script>
+    jQuery(document).ready(function($) {
+        $('#decor-ship-different').on('change', function() {
+            if ($(this).is(':checked')) {
+                $('.decor-shipping-fields').slideDown(300);
+                // Make fields required
+                $('.decor-shipping-fields input[type="text"]').each(function() {
+                    if ($(this).closest('.form-row').find('.required').length) {
+                        $(this).prop('required', true);
+                    }
+                });
+            } else {
+                $('.decor-shipping-fields').slideUp(300);
+                // Remove required
+                $('.decor-shipping-fields input').prop('required', false);
+            }
+        });
+    });
+    </script>
+    <?php
+}
+
+/**
+ * Add styling for checkout
  */
 add_action('wp_head', 'decor_checkout_styles');
 function decor_checkout_styles() {
@@ -474,8 +561,12 @@ function decor_checkout_styles() {
             content: '💳 ';
         }
         
-        /* Ship to different address checkbox styling */
-        #ship-to-different-address {
+        /* Custom shipping section */
+        .decor-shipping-section {
+            margin-top: 30px;
+        }
+        
+        .shipping-toggle {
             background: #faf9f7;
             padding: 20px 25px;
             border: 1px solid #ddd;
@@ -484,11 +575,11 @@ function decor_checkout_styles() {
             transition: all 0.2s;
         }
         
-        #ship-to-different-address:hover {
+        .shipping-toggle:hover {
             border-color: #c4a47c;
         }
         
-        #ship-to-different-address label {
+        .shipping-toggle label {
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
@@ -498,41 +589,63 @@ function decor_checkout_styles() {
             margin: 0;
         }
         
-        #ship-to-different-address label::before {
-            content: '📦';
-            font-size: 20px;
-        }
-        
-        #ship-to-different-address input[type="checkbox"] {
+        .shipping-toggle input[type="checkbox"] {
             width: 20px;
             height: 20px;
-            margin-right: 10px;
         }
         
-        /* Shipping fields when open */
-        .shipping_address {
+        .shipping-toggle .toggle-note {
+            margin: 10px 0 0 30px;
+            font-size: 13px;
+            color: #666;
+        }
+        
+        /* Shipping fields */
+        .decor-shipping-fields {
             background: #faf9f7;
             padding: 30px;
             border: 2px solid #c4a47c;
             margin-bottom: 30px;
-            animation: slideDown 0.3s ease;
         }
         
-        @keyframes slideDown {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        /* Note for designers */
-        .shipping_address::before {
-            content: 'Enter your client\'s delivery address below.';
-            display: block;
+        .decor-shipping-fields .shipping-note {
             background: #fff;
-            padding: 12px 15px;
+            padding: 15px;
             margin-bottom: 20px;
             border-left: 3px solid #c4a47c;
             font-size: 14px;
-            color: #666;
+            color: #333;
+        }
+        
+        .decor-shipping-fields .form-row {
+            margin-bottom: 15px;
+        }
+        
+        .decor-shipping-fields label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        .decor-shipping-fields .required {
+            color: #c4a47c;
+        }
+        
+        .decor-shipping-fields input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .decor-shipping-fields input:focus {
+            border-color: #c4a47c;
+            outline: none;
+        }
+        
+        /* Hide default WooCommerce shipping fields */
+        .woocommerce-shipping-fields {
+            display: none !important;
         }
     </style>
     <?php
